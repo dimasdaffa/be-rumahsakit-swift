@@ -1,4 +1,4 @@
-// swift-tools-version:6.0
+// swift-tools-version:5.9
 import PackageDescription
 
 let package = Package(
@@ -8,31 +8,25 @@ let package = Package(
     ],
     dependencies: [
         // 💧 A server-side Swift web framework.
-        .package(url: "https://github.com/vapor/vapor.git", from: "4.115.0"),
-        // 🔵 Non-blocking, event-driven networking for Swift. Used for custom executors
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
+        .package(url: "https://github.com/vapor/vapor.git", from: "4.99.3"),
+        .package(url: "https://github.com/vapor/fluent.git", from: "4.0.0"),
+        .package(url: "https://github.com/vapor/fluent-mysql-driver.git", from: "4.0.0"),
     ],
     targets: [
         .executableTarget(
             name: "BeRumahsakit",
             dependencies: [
                 .product(name: "Vapor", package: "vapor"),
-                .product(name: "NIOCore", package: "swift-nio"),
-                .product(name: "NIOPosix", package: "swift-nio"),
-            ],
-            swiftSettings: swiftSettings
+                .product(name: "Fluent", package: "fluent"),
+                .product(name: "FluentMySQLDriver", package: "fluent-mysql-driver"),
+            ]
         ),
         .testTarget(
             name: "BeRumahsakitTests",
             dependencies: [
                 .target(name: "BeRumahsakit"),
                 .product(name: "VaporTesting", package: "vapor"),
-            ],
-            swiftSettings: swiftSettings
+            ]
         )
     ]
 )
-
-var swiftSettings: [SwiftSetting] { [
-    .enableUpcomingFeature("ExistentialAny"),
-] }

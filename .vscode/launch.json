@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:be-rumahsakit}",
+            "name": "Debug BeRumahsakit",
+            "target": "BeRumahsakit",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug BeRumahsakit"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:be-rumahsakit}",
+            "name": "Release BeRumahsakit",
+            "target": "BeRumahsakit",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release BeRumahsakit"
+        }
+    ]
+}

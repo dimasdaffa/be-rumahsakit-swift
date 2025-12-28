@@ -2,10 +2,9 @@ import Vapor
 
 func routes(_ app: Application) throws {
     app.get { req async in
-        "It works!"
+        "RS Bhayangkara API is Running! 🚀"
     }
 
-    app.get("hello") { req async -> String in
-        "Hello, world!"
-    }
+    // Register the CRUD Controller
+    try app.register(collection: DoctorController())
 }
