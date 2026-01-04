@@ -1,15 +1,39 @@
 import Vapor
 import Fluent
+import VaporToOpenAPI
 
+// DTO for creating/updating doctors - tells Swagger what fields are expected
+struct CreateDoctorInput: Content {
+    var name: String
+    var email: String
+    var phone: String
+    var specialty: String
+    var status: String
+    var license: String?
+    var experience: Int
+    var education: String?
+    var bio: String?
+    var joinDate: String?
+    var totalPatients: Int
+    var rating: Double
+}
 struct DoctorController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         let doctors = routes.grouped("api", "doctors")
         
         doctors.get(use: index)
+        
+        // POST with documented request body
         doctors.post(use: create)
+            .openAPI(body: .type(CreateDoctorInput.self))
+        
         doctors.group(":id") { doctor in
             doctor.get(use: show)
+            
+            // PUT with documented request body
             doctor.put(use: update)
+                .openAPI(body: .type(CreateDoctorInput.self))
+            
             doctor.delete(use: delete)
         }
     }
@@ -24,8 +48,24 @@ struct DoctorController: RouteCollection {
     // POST /api/doctors
     @Sendable
     func create(req: Request) async throws -> Doctor {
-        // Decode JSON -> Doctor Object
-        let doctor = try req.content.decode(Doctor.self)
+        // Decode JSON -> CreateDoctorInput
+        let input = try req.content.decode(CreateDoctorInput.self)
+        
+        // Create Doctor from input
+        let doctor = Doctor(
+            name: input.name,
+            email: input.email,
+            phone: input.phone,
+            specialty: input.specialty,
+            status: input.status,
+            license: input.license,
+            experience: input.experience,
+            education: input.education,
+            bio: input.bio,
+            joinDate: input.joinDate,
+            totalPatients: input.totalPatients,
+            rating: input.rating
+        )
         
         // Save to MySQL
         try await doctor.save(on: req.db)
@@ -51,7 +91,7 @@ struct DoctorController: RouteCollection {
         }
         
         // 2. Decode the new data
-        let input = try req.content.decode(Doctor.self)
+        let input = try req.content.decode(CreateDoctorInput.self)
         
         // 3. Update fields
         doctor.name = input.name

@@ -1,7 +1,17 @@
 import Fluent
+import FluentSQL
 
 struct CreateDoctor: AsyncMigration {
     func prepare(on database: Database) async throws {
+        // Check if table already exists (idempotent migration)
+        if let sql = database as? SQLDatabase {
+            let tables = try await sql.raw("SHOW TABLES LIKE 'doctors'").all()
+            guard tables.isEmpty else {
+                database.logger.info("Table 'doctors' already exists, skipping creation.")
+                return
+            }
+        }
+        
         try await database.schema("doctors")
             .id()
             .field("name", .string, .required)

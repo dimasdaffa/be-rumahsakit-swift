@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "BeRumahsakit",
+    name: "rumahsakit",
     platforms: [
        .macOS(.v13)
     ],
@@ -15,7 +15,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "BeRumahsakit",
+            name: "rumahsakit",
             dependencies: [
                 .product(name: "Vapor", package: "vapor"),
                 .product(name: "Fluent", package: "fluent"),
@@ -24,9 +24,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "BeRumahsakitTests",
+            name: "rumahsakitTests",
             dependencies: [
-                .target(name: "BeRumahsakit"),
+                .target(name: "rumahsakit"),
                 .product(name: "VaporTesting", package: "vapor"),
             ]
         )

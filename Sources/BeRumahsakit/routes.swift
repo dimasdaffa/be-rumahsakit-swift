@@ -5,13 +5,13 @@ func routes(_ app: Application) throws {
     
     // 1. REGISTER YOUR CONTROLLERS
     try app.register(collection: DoctorController())
-
+    try app.register(collection: ScheduleController())
     // 2. SWAGGER API (The JSON File)
     app.get("swagger.json") { req in
         // This generates the OpenAPI Spec automatically!
         app.routes.openAPI(
             info: InfoObject(
-                title: "RS Bhayangkara Blora API",
+                title: "RS Permata Sehat API",
                 description: "API Documentation for Hospital Management System",
                 version: "1.0.0"
             )
@@ -36,7 +36,7 @@ func routes(_ app: Application) throws {
             <script>
                 window.onload = () => {
                     window.ui = SwaggerUIBundle({
-                        url: '/swagger.json', // 👈 Points to your JSON route above
+                        url: '/swagger.json', 
                         dom_id: '#swagger-ui',
                     });
                 };

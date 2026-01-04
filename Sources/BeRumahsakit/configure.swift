@@ -28,9 +28,10 @@ public func configure(_ app: Application) async throws {
 
     // 3. REGISTER MIGRATIONS (No changes needed here!)
     app.migrations.add(CreateDoctor())
+    app.migrations.add(CreateSchedule())
     
-    // 4. AUTO MIGRATE
-    try await app.autoMigrate()
+    // 4. AUTO MIGRATE (commented out - run manually with: swift run rumahsakit migrate)
+    // try await app.autoMigrate()
 
     try routes(app)
 }
