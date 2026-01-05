@@ -3,24 +3,15 @@ import VaporToOpenAPI
 
 func routes(_ app: Application) throws {
     
-    // 1. REGISTER YOUR CONTROLLERS
-    try app.register(collection: DoctorController())
-    try app.register(collection: ScheduleController())
+    // ==========================================
+    // 1. PUBLIC ROUTES (Open to everyone) 🌍
+    // ==========================================
     try app.register(collection: AuthController())
-    // 2. SWAGGER API (The JSON File)
+    
+    // Swagger Documentation
     app.get("swagger.json") { req in
-        // This generates the OpenAPI Spec automatically!
-        app.routes.openAPI(
-            info: InfoObject(
-                title: "RS Permata Sehat API",
-                description: "API Documentation for Hospital Management System",
-                version: "1.0.0"
-            )
-        )
+        app.routes.openAPI(info: InfoObject(title: "RS Permata Sehat API", version: "1.0.0"))
     }
-
-    // 3. SWAGGER UI (The Interface)
-    // We use a CDN to load the Swagger UI and point it to our JSON
     app.get("api-docs") { req -> Response in
         let html = """
         <!DOCTYPE html>
@@ -45,9 +36,30 @@ func routes(_ app: Application) throws {
         </body>
         </html>
         """
-        
         var headers = HTTPHeaders()
         headers.add(name: .contentType, value: "text/html")
         return Response(status: .ok, headers: headers, body: .init(string: html))
     }
+
+    // ==========================================
+    // 2. PROTECTED ROUTES (Must have Token) 🔒
+    // ==========================================
+    // Users can access these if they are logged in (Doctor, Patient, or Admin)
+    let protected = app.grouped(UserAuthenticator())
+                       .grouped(User.guardMiddleware())
+
+    // (Add general protected routes here later, like "View My Profile")
+
+
+    // ==========================================
+    // 3. ADMIN ONLY ROUTES (Must be Admin) 👮‍♂️
+    // ==========================================
+    // ONLY Admins can access these.
+    // If a Patient tries to POST here, they get 403 Forbidden.
+    let adminOnly = protected.grouped(CheckRole(requiredRole: .admin))
+    
+    // ⚠️ IMPORTANT: DoctorController & ScheduleController MUST be here!
+    // Do NOT register them at the top of the file!
+    try adminOnly.register(collection: DoctorController())
+    try adminOnly.register(collection: ScheduleController())
 }

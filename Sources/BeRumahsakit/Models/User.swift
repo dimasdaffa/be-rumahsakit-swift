@@ -8,7 +8,7 @@ enum UserRole: String, Codable {
     case patient
 }
 
-final class User: Model, Content, @unchecked Sendable {
+final class User: Model, Content, @unchecked Sendable, Authenticatable {
     static let schema = "users"
 
     @ID(key: .id)
