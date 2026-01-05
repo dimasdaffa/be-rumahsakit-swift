@@ -6,6 +6,7 @@ func routes(_ app: Application) throws {
     // 1. REGISTER YOUR CONTROLLERS
     try app.register(collection: DoctorController())
     try app.register(collection: ScheduleController())
+    try app.register(collection: AuthController())
     // 2. SWAGGER API (The JSON File)
     app.get("swagger.json") { req in
         // This generates the OpenAPI Spec automatically!
