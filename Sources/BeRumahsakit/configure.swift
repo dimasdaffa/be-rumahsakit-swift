@@ -34,6 +34,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateDoctor())
     app.migrations.add(CreateSchedule())
     app.migrations.add(CreateUser())
+    app.migrations.add(CreateAppointment())
     
     // 4. AUTO MIGRATE (commented out - run manually with: swift run rumahsakit migrate)
     // try await app.autoMigrate()
