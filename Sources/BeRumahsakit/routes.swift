@@ -57,9 +57,15 @@ func routes(_ app: Application) throws {
     // ONLY Admins can access these.
     // If a Patient tries to POST here, they get 403 Forbidden.
     let adminOnly = protected.grouped(CheckRole(requiredRole: .admin))
+    try protected.register(collection: AppointmentController())
     
     // ⚠️ IMPORTANT: DoctorController & ScheduleController MUST be here!
     // Do NOT register them at the top of the file!
     try adminOnly.register(collection: DoctorController())
     try adminOnly.register(collection: ScheduleController())
+
+    // Appointment Approval Routes
+    let appointments = adminOnly.grouped("api", "appointments")
+    appointments.put(":id", "approve", use: AppointmentController().approve)
+    appointments.put(":id", "reject", use: AppointmentController().reject)
 }

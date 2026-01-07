@@ -31,3 +31,10 @@ struct UserPayload: JWTPayload {
         try expiration.verifyNotExpired()
     }
 }
+
+struct CreateAppointmentRequest: Content {
+    var doctorId: UUID
+    var date: String
+    var time: String
+    var reason: String
+}
