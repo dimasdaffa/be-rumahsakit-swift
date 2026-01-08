@@ -38,3 +38,12 @@ struct CreateAppointmentRequest: Content {
     var time: String
     var reason: String
 }
+
+struct CreateMedicalRecordRequest: Content {
+    var appointmentId: UUID
+    var diagnosis: String
+    var symptoms: String
+    var treatment: String
+    var prescription: String?
+    var notes: String?
+}

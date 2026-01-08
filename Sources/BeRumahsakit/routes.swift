@@ -63,6 +63,7 @@ func routes(_ app: Application) throws {
     // Do NOT register them at the top of the file!
     try adminOnly.register(collection: DoctorController())
     try adminOnly.register(collection: ScheduleController())
+    try protected.register(collection: MedicalRecordController())
 
     // Appointment Approval Routes
     let appointments = adminOnly.grouped("api", "appointments")
