@@ -6,9 +6,14 @@ struct UserController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let users = routes.grouped("api", "users")
         
+        // ==========================
         // 1. PUBLIC ROUTES (None)
+        // ==========================
         
+        // ==========================
         // 2. PROTECTED ROUTES (Any Logged-in User)
+        // ==========================
+        
         // GET /api/users/me (Who am I?)
         users.get("me", use: getMe)
             .openAPI(summary: "Get current user profile")
@@ -20,81 +25,128 @@ struct UserController: RouteCollection {
                 body: .type(UpdateProfileRequest.self)
             )
             
-        // 3. DOCTOR/ADMIN ROUTES
-        // GET /api/patients (List all patients)
+        // ==========================
+        // 3. DOCTOR & ADMIN ROUTES
+        // ==========================
+        
+        // GET /api/users/patients (List all patients)
         users.get("patients", use: listPatients)
             .openAPI(summary: "List all patients (Doctor/Admin only)")
+
+        // GET /api/users/patients/:id (Get specific patient details)
+        users.get("patients", ":id", use: getPatientDetail)
+            .openAPI(summary: "Get patient details (Doctor/Admin only)")
             
-        // 4. ADMIN ROUTES
+        // ==========================
+        // 4. ADMIN ONLY ROUTES
+        // ==========================
+        
         // GET /api/users (List all system users)
         users.get(use: listAllUsers)
             .openAPI(summary: "List all users (Admin only)")
+        
+        // GET /api/users/:id (Get any user detail)
+        users.get(":id", use: getUserDetail)
+            .openAPI(summary: "Get specific user (Admin only)")
+
+        // PUT /api/users/:id (Update any user)
+        users.put(":id", use: updateUser)
+            .openAPI(summary: "Update specific user (Admin only)")
             
         // DELETE /api/users/:id
         users.delete(":id", use: deleteUser)
     }
 
-    // 👤 GET /api/users/me
-    @Sendable
-    func getMe(req: Request) async throws -> User.Public {
-        let user = try req.auth.require(User.self)
-        return user.toPublic()
-    }
+    // MARK: - Handlers
 
-    // ✏️ PUT /api/users/me
+    // 👤 ME
     @Sendable
-    func updateMe(req: Request) async throws -> User.Public {
+    func getMe(req: Request) async throws -> UserResponse {
+        let user = try req.auth.require(User.self)
+        return UserResponse(user: user)
+    }
+    
+    @Sendable
+    func updateMe(req: Request) async throws -> UserResponse {
         let user = try req.auth.require(User.self)
         let input = try req.content.decode(UpdateProfileRequest.self)
         
-        // Find fresh user from DB to ensure we modify the real record
+        // Fetch fresh from DB
         guard let dbUser = try await User.find(user.id, on: req.db) else {
             throw Abort(.notFound)
         }
         
-        if let newName = input.name {
-            dbUser.name = newName
-        }
-        if let newEmail = input.email {
-            dbUser.email = newEmail
-        }
+        if let name = input.name { dbUser.name = name }
+        if let email = input.email { dbUser.email = email }
         
         try await dbUser.save(on: req.db)
-        return dbUser.toPublic()
+        return UserResponse(user: dbUser)
     }
 
-    // 🏥 GET /api/users/patients (Doctors/Admins Only)
+    // 🏥 PATIENTS (Doctor/Admin)
     @Sendable
-    func listPatients(req: Request) async throws -> [User.Public] {
+    func listPatients(req: Request) async throws -> [UserResponse] {
         let user = try req.auth.require(User.self)
-        
-        // Guard: Only Doctors or Admins can see patient lists
         guard user.role == .doctor || user.role == .admin else {
             throw Abort(.forbidden, reason: "Only doctors can view patient lists")
         }
         
-        // Fetch all users with role 'patient'
         let patients = try await User.query(on: req.db)
             .filter(\.$role == .patient)
             .all()
-            
-        return patients.map { $0.toPublic() }
+        return patients.map { UserResponse(user: $0) }
     }
 
-    // 👮‍♂️ GET /api/users (Admin Only)
     @Sendable
-    func listAllUsers(req: Request) async throws -> [User.Public] {
+    func getPatientDetail(req: Request) async throws -> UserResponse {
         let user = try req.auth.require(User.self)
+        guard user.role == .doctor || user.role == .admin else { throw Abort(.forbidden) }
         
-        guard user.role == .admin else {
-            throw Abort(.forbidden)
+        guard let patient = try await User.find(req.parameters.get("id"), on: req.db),
+              patient.role == .patient else {
+            throw Abort(.notFound, reason: "Patient not found")
         }
+        return UserResponse(user: patient)
+    }
+
+    // 👮‍♂️ ADMIN OPERATIONS
+    @Sendable
+    func listAllUsers(req: Request) async throws -> [UserResponse] {
+        let user = try req.auth.require(User.self)
+        guard user.role == .admin else { throw Abort(.forbidden) }
         
         let users = try await User.query(on: req.db).all()
-        return users.map { $0.toPublic() }
+        return users.map { UserResponse(user: $0) }
+    }
+
+    @Sendable
+    func getUserDetail(req: Request) async throws -> UserResponse {
+        let user = try req.auth.require(User.self)
+        guard user.role == .admin else { throw Abort(.forbidden) }
+
+        guard let targetUser = try await User.find(req.parameters.get("id"), on: req.db) else {
+            throw Abort(.notFound)
+        }
+        return UserResponse(user: targetUser)
+    }
+
+    @Sendable
+    func updateUser(req: Request) async throws -> UserResponse {
+        let user = try req.auth.require(User.self)
+        guard user.role == .admin else { throw Abort(.forbidden) }
+        
+        guard let targetUser = try await User.find(req.parameters.get("id"), on: req.db) else {
+            throw Abort(.notFound)
+        }
+        
+        let input = try req.content.decode(UpdateProfileRequest.self)
+        if let name = input.name { targetUser.name = name }
+        if let email = input.email { targetUser.email = email }
+        
+        try await targetUser.save(on: req.db)
+        return UserResponse(user: targetUser)
     }
     
-    // ❌ DELETE /api/users/:id (Admin Only)
     @Sendable
     func deleteUser(req: Request) async throws -> HTTPStatus {
         let user = try req.auth.require(User.self)

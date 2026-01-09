@@ -44,31 +44,26 @@ func routes(_ app: Application) throws {
     // ==========================================
     // 2. PROTECTED ROUTES (Must have Token) 🔒
     // ==========================================
-    // Users can access these if they are logged in (Doctor, Patient, or Admin)
+    // All logged-in users can access these (Patient, Doctor, or Admin)
     let protected = app.grouped(UserAuthenticator())
                        .grouped(User.guardMiddleware())
 
-    // (Add general protected routes here later, like "View My Profile")
-
+    try protected.register(collection: AppointmentController())
+    try protected.register(collection: MedicalRecordController())
+    try protected.register(collection: UserController())
 
     // ==========================================
     // 3. ADMIN ONLY ROUTES (Must be Admin) 👮‍♂️
     // ==========================================
     // ONLY Admins can access these.
-    // If a Patient tries to POST here, they get 403 Forbidden.
+    // If a Patient/Doctor tries to access, they get 403 Forbidden.
     let adminOnly = protected.grouped(CheckRole(requiredRole: .admin))
-    try protected.register(collection: AppointmentController())
-    
-    // ⚠️ IMPORTANT: DoctorController & ScheduleController MUST be here!
-    // Do NOT register them at the top of the file!
     try adminOnly.register(collection: DoctorController())
     try adminOnly.register(collection: ScheduleController())
-    try protected.register(collection: MedicalRecordController())
-    try protected.register(collection: UserController()) 
-
-    // Appointment Approval Routes
-    let appointments = adminOnly.grouped("api", "appointments")
-    appointments.put(":id", "approve", use: AppointmentController().approve)
-    appointments.put(":id", "reject", use: AppointmentController().reject)
     try adminOnly.register(collection: AnalyticsController())
+
+    // Appointment Approval/Rejection Routes (Admin Only)
+    let appointmentAdmin = adminOnly.grouped("api", "appointments")
+    appointmentAdmin.put(":id", "approve", use: AppointmentController().approve)
+    appointmentAdmin.put(":id", "reject", use: AppointmentController().reject)
 }

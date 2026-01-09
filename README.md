@@ -96,7 +96,24 @@ GET /api/users/me
 ```
 **Access:** All authenticated users
 
-**Response:** Current authenticated `User.Public` object
+**Response:** `UserResponse` object
+
+---
+
+#### Update Current User Profile
+```
+PUT /api/users/me
+```
+**Access:** All authenticated users
+
+**Request Body:**
+```json
+{
+  "name": "New Name",      // optional
+  "email": "new@email.com" // optional
+}
+```
+**Response:** Updated `UserResponse` object
 
 ---
 
@@ -106,7 +123,64 @@ GET /api/users/patients
 ```
 **Access:** Doctors and Admins only
 
-**Response:** Array of `User.Public` objects (patients only)
+**Response:** Array of `UserResponse` objects (patients only)
+
+---
+
+#### Get Patient Details
+```
+GET /api/users/patients/:id
+```
+**Access:** Doctors and Admins only
+
+**Response:** `UserResponse` object
+
+---
+
+#### List All Users
+```
+GET /api/users
+```
+**Access:** Admin only
+
+**Response:** Array of `UserResponse` objects (all users)
+
+---
+
+#### Get User Details
+```
+GET /api/users/:id
+```
+**Access:** Admin only
+
+**Response:** `UserResponse` object
+
+---
+
+#### Update User
+```
+PUT /api/users/:id
+```
+**Access:** Admin only
+
+**Request Body:**
+```json
+{
+  "name": "New Name",      // optional
+  "email": "new@email.com" // optional
+}
+```
+**Response:** Updated `UserResponse` object
+
+---
+
+#### Delete User
+```
+DELETE /api/users/:id
+```
+**Access:** Admin only
+
+**Response:** `204 No Content`
 
 ---
 
