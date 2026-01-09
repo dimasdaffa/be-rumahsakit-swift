@@ -69,4 +69,5 @@ func routes(_ app: Application) throws {
     let appointments = adminOnly.grouped("api", "appointments")
     appointments.put(":id", "approve", use: AppointmentController().approve)
     appointments.put(":id", "reject", use: AppointmentController().reject)
+    try adminOnly.register(collection: AnalyticsController())
 }

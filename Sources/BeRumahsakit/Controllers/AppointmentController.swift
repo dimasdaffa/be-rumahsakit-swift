@@ -15,6 +15,8 @@ struct AppointmentController: RouteCollection {
                 summary: "Book an Appointment",
                 body: .type(CreateAppointmentRequest.self)
             )
+            // View Single Appointment
+        appointments.get(":id", use: show)
     }
 
     // 1. LIST MY APPOINTMENTS 📋
@@ -85,6 +87,34 @@ struct AppointmentController: RouteCollection {
         // 2. Change Status
         appointment.status = "rejected"
         try await appointment.save(on: req.db)
+        
+        return appointment
+    }
+
+    // 5. SHOW SINGLE APPOINTMENT 🔍
+    @Sendable
+    func show(req: Request) async throws -> Appointment {
+        // 1. Get the ID from URL
+        guard let id = req.parameters.get("id", as: UUID.self) else {
+            throw Abort(.badRequest)
+        }
+
+        // 2. Find Appointment (Join with Doctor & Patient for full info)
+        guard let appointment = try await Appointment.query(on: req.db)
+            .filter(\.$id == id)
+            .with(\.$doctor)
+            .with(\.$patient)
+            .first() else {
+            throw Abort(.notFound)
+        }
+        
+        // 3. SECURITY CHECK 🔒
+        let user = try req.auth.require(User.self)
+        
+        // If you are NOT Admin AND this appointment is NOT yours -> Forbidden!
+        if user.role != .admin && appointment.$patient.id != user.id {
+            throw Abort(.forbidden, reason: "You are not allowed to view this appointment.")
+        }
         
         return appointment
     }

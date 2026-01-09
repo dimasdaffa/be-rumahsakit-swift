@@ -19,6 +19,26 @@
             "target": "BeRumahsakit",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release BeRumahsakit"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:be-rumahsakit}",
+            "name": "Debug rumahsakit",
+            "target": "rumahsakit",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug rumahsakit"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:be-rumahsakit}",
+            "name": "Release rumahsakit",
+            "target": "rumahsakit",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release rumahsakit"
         }
     ]
 }
