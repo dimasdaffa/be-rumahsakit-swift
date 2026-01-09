@@ -88,6 +88,28 @@ POST /api/auth/login
 > Authorization: Bearer <your_token>
 > ```
 
+### Users
+
+#### Get Current User
+```
+GET /api/users/me
+```
+**Access:** All authenticated users
+
+**Response:** Current authenticated `User.Public` object
+
+---
+
+#### List All Patients
+```
+GET /api/users/patients
+```
+**Access:** Doctors and Admins only
+
+**Response:** Array of `User.Public` objects (patients only)
+
+---
+
 ### Appointments
 
 #### List My Appointments
