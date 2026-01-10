@@ -31,30 +31,31 @@ struct AuthController: RouteCollection {
     // 📝 REGISTER
     @Sendable
     func register(req: Request) async throws -> User.Public {
-        // 1. Validate Input
         let input = try req.content.decode(RegisterRequest.self)
+
+        // 1. Restrict Doctor/Admin Registration
+        // Only allow "patient" registration via public API.
+        // Admins/Doctors must be created via the Admin Panel (DoctorController).
+        let role = UserRole(rawValue: input.role) ?? .patient
+        
+        if role == .doctor || role == .admin {
+            throw Abort(.forbidden, reason: "Doctors and Admins must be created by an Administrator.")
+        }
 
         // 2. Check if email exists
         if (try await User.query(on: req.db).filter(\.$email == input.email).first()) != nil {
             throw Abort(.conflict, reason: "Email already exists")
         }
 
-        // 3. Hash Password 🔒
+        // 3. Hash Password & Save
         let hashedPassword = try Bcrypt.hash(input.password)
-
-        // 4. Create & Save User
-        // Note: We force-unwrap UserRole(rawValue:) for simplicity, but you should handle invalid roles safer in production
-        let role = UserRole(rawValue: input.role) ?? .patient
-
         let user = User(
             name: input.name,
             email: input.email,
             passwordHash: hashedPassword,
             role: role
         )
-
         try await user.save(on: req.db)
-
         return user.toPublic()
     }
 
@@ -99,9 +100,9 @@ struct AuthController: RouteCollection {
         let input = try req.content.decode(ChangePasswordRequest.self)
 
         // 2. Verify Old Password
-        let isMatch = try Bcrypt.verify(input.oldPassword, created: user.passwordHash)
+        let isMatch = try Bcrypt.verify(input.currentPassword, created: user.passwordHash)
         if !isMatch {
-            throw Abort(.unauthorized, reason: "Old password is incorrect")
+            throw Abort(.unauthorized, reason: "Current password is incorrect")
         }
 
         // 3. Hash New Password

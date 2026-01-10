@@ -81,6 +81,29 @@ POST /api/auth/login
 
 ---
 
+#### Change Password
+```
+POST /api/auth/change-password
+```
+**Access:** All authenticated users
+
+**Request Body:**
+```json
+{
+  "currentPassword": "oldPassword123",
+  "newPassword": "newSecurePassword456"
+}
+```
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Password updated successfully"
+}
+```
+
+---
+
 ## 🔒 Protected Endpoints (Authentication Required)
 
 > **Note:** Include the JWT token in the Authorization header:

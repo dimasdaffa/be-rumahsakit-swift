@@ -1,5 +1,5 @@
-import Vapor
 import Fluent
+import Vapor
 
 final class MedicalRecord: Model, Content {
     static let schema = "medical_records"
@@ -31,12 +31,46 @@ final class MedicalRecord: Model, Content {
     @OptionalField(key: "notes")
     var notes: String?
 
+    @Field(key: "follow_up_required")
+    var followUpRequired: Bool
+
+    @OptionalField(key: "follow_up_date")
+    var followUpDate: String?
+
+    // Vitals
+    @OptionalField(key: "vital_blood_pressure")
+    var vitalBloodPressure: String?
+
+    @OptionalField(key: "vital_heart_rate")
+    var vitalHeartRate: String?
+
+    @OptionalField(key: "vital_temperature")
+    var vitalTemperature: String?
+
+    @OptionalField(key: "vital_weight")
+    var vitalWeight: String?
+
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
 
-    init() { }
+    init() {}
 
-    init(id: UUID? = nil, appointmentId: Appointment.IDValue, patientId: User.IDValue, diagnosis: String, symptoms: String, treatment: String, prescription: String? = nil, notes: String? = nil) {
+    init(
+        id: UUID? = nil, 
+        appointmentId: Appointment.IDValue, 
+        patientId: User.IDValue, 
+        diagnosis: String, 
+        symptoms: String, 
+        treatment: String, 
+        prescription: String? = nil, 
+        notes: String? = nil,
+        followUpRequired: Bool = false,
+        followUpDate: String? = nil,
+        vitalBloodPressure: String? = nil,
+        vitalHeartRate: String? = nil,
+        vitalTemperature: String? = nil,
+        vitalWeight: String? = nil
+    ) {
         self.id = id
         self.$appointment.id = appointmentId
         self.$patient.id = patientId
@@ -45,5 +79,11 @@ final class MedicalRecord: Model, Content {
         self.treatment = treatment
         self.prescription = prescription
         self.notes = notes
+        self.followUpRequired = followUpRequired
+        self.followUpDate = followUpDate
+        self.vitalBloodPressure = vitalBloodPressure
+        self.vitalHeartRate = vitalHeartRate
+        self.vitalTemperature = vitalTemperature
+        self.vitalWeight = vitalWeight
     }
 }

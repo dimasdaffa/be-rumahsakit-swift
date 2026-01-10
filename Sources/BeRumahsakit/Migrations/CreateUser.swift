@@ -12,11 +12,15 @@ struct CreateUser: AsyncMigration {
             }
         }
         // 1. Create the Enum type in MySQL first
-        let roleSchema = try await database.enum("user_role")
+        // Check if enum exists first to avoid errors during fresh migration if not dropped cleanly
+        try? await database.enum("user_role")
             .case("admin")
             .case("doctor")
             .case("patient")
             .create()
+
+        // Re-fetch the enum to ensure we have the schema
+        let roleSchema = try await database.enum("user_role").read()
 
         // 2. Create the Users table
         try await database.schema("users")
@@ -24,9 +28,20 @@ struct CreateUser: AsyncMigration {
             .field("name", .string, .required)
             .field("email", .string, .required)
             .field("password_hash", .string, .required)
-            .field("role", roleSchema, .required) // Use the Enum
+            .field("role", roleSchema, .required)
+            .field("phone", .string)
+            .field("date_of_birth", .string)  // YYYY-MM-DD
+            .field("gender", .string)  // "male", "female"
+            .field("address", .string)
+            .field("city", .string)
+            .field("province", .string)
+            .field("postal_code", .string)
+            .field("emergency_contact", .string)
+            .field("emergency_phone", .string)
+
             .field("created_at", .datetime)
-            .unique(on: "email") // Email must be unique
+            .field("updated_at", .datetime)  // Good practice to have updated_at
+            .unique(on: "email")
             .create()
     }
 

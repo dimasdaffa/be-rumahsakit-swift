@@ -17,8 +17,11 @@ DB_NAME="${DATABASE_NAME:-rumahsakit}"
 echo "🗑️  Dropping all tables in database '$DB_NAME'..."
 mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" <<EOF
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS doctors;
+DROP TABLE IF EXISTS appointments;
+DROP TABLE IF EXISTS medical_records;
 DROP TABLE IF EXISTS schedules;
+DROP TABLE IF EXISTS doctors;
+DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS _fluent_migrations;
 SET FOREIGN_KEY_CHECKS = 1;
 EOF
@@ -29,7 +32,7 @@ if [ $? -eq 0 ]; then
     
     # Run migrations
     echo "🚀 Running migrations..."
-    swift run rumahsakit migrate --auto-migrate
+    swift run rumahsakit migrate
     
     if [ $? -eq 0 ]; then
         echo ""

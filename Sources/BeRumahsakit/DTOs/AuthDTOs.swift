@@ -1,12 +1,12 @@
-import Vapor
 import JWT
+import Vapor
 
 // 1. What the user sends to Register
 struct RegisterRequest: Content {
     var name: String
     var email: String
     var password: String
-    var role: String // "admin", "doctor", or "patient"
+    var role: String  // "admin", "doctor", or "patient"
 }
 
 // 2. What the user sends to Login
@@ -23,7 +23,7 @@ struct LoginResponse: Content {
 
 // 4. The Data inside the JWT Token (Payload)
 struct UserPayload: JWTPayload {
-    var subject: SubjectClaim // The User ID
+    var subject: SubjectClaim  // The User ID
     var expiration: ExpirationClaim
     var role: String
 
@@ -37,6 +37,14 @@ struct CreateAppointmentRequest: Content {
     var date: String
     var time: String
     var reason: String
+    var complaints: String?
+}
+
+struct VitalSignsDTO: Content {
+    var bloodPressure: String?
+    var heartRate: String?
+    var temperature: String?
+    var weight: String?
 }
 
 struct CreateMedicalRecordRequest: Content {
@@ -46,4 +54,7 @@ struct CreateMedicalRecordRequest: Content {
     var treatment: String
     var prescription: String?
     var notes: String?
+    var followUpRequired: Bool
+    var followUpDate: String?
+    var vitalSigns: VitalSignsDTO?
 }

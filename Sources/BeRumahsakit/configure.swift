@@ -4,18 +4,19 @@ import FluentMySQLDriver
 import JWT
 
 public func configure(_ app: Application) async throws {
-    // 1. CORS (Keep this as is)
+    // 1. CORS
     let corsConfiguration = CORSMiddleware.Configuration(
         allowedOrigin: .all,
         allowedMethods: [.GET, .POST, .PUT, .OPTIONS, .DELETE, .PATCH],
         allowedHeaders: [.accept, .authorization, .contentType, .origin, .xRequestedWith]
     )
     app.middleware.use(CORSMiddleware(configuration: corsConfiguration), at: .beginning)
-    // 1. CONFIGURE JWT 🔑
+    
+    // 2. JWT
     let jwtSecret = Environment.get("JWT_SECRET") ?? "default-secret-change-in-production"
     app.jwt.signers.use(.hs256(key: jwtSecret))
 
-    // 2. CONNECT TO MYSQL 🐬 - Using environment variables
+    // 3. DATABASE
     let hostname = Environment.get("DATABASE_HOST") ?? "127.0.0.1"
     let port = Environment.get("DATABASE_PORT").flatMap(Int.init) ?? 3306
     let username = Environment.get("DATABASE_USERNAME") ?? "root"
@@ -30,15 +31,13 @@ public func configure(_ app: Application) async throws {
         database: database
     ), as: .mysql)
 
-    // 3. REGISTER MIGRATIONS
-    app.migrations.add(CreateDoctor())
-    app.migrations.add(CreateSchedule())
-    app.migrations.add(CreateUser())
-    app.migrations.add(CreateAppointment())
-    app.migrations.add(CreateMedicalRecord())
-    
-    // 4. AUTO MIGRATE (commented out - run manually with: swift run rumahsakit migrate)
-    // try await app.autoMigrate()
+    // 4. REGISTER MIGRATIONS 
+    app.migrations.add(CreateUser())          // 1. Create Users first
+    app.migrations.add(CreateDoctor())        // 2. Doctors link to Users
+    app.migrations.add(CreateSchedule())      // 3. Schedules link to Doctors
+    app.migrations.add(CreateAppointment())   // 4. Appointments link to both
+    app.migrations.add(CreateMedicalRecord()) // 5. Records link to Appointment
+    app.migrations.add(SeedAdminUser())
 
     try routes(app)
 }

@@ -20,6 +20,13 @@ struct CreateMedicalRecord: AsyncMigration {
             .field("treatment", .string, .required)
             .field("prescription", .string)
             .field("notes", .string)
+            .field("follow_up_required", .bool, .required, .sql(.default(false)))
+            .field("follow_up_date", .string)     
+            // Vital Signs (Flattened)
+            .field("vital_blood_pressure", .string)
+            .field("vital_heart_rate", .string)
+            .field("vital_temperature", .string)
+            .field("vital_weight", .string)
             .field("created_at", .datetime)
             .create()
     }

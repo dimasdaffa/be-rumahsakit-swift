@@ -26,8 +26,39 @@ final class User: Model, Content, @unchecked Sendable, Authenticatable {
     @Enum(key: "role")
     var role: UserRole
 
+    @OptionalField(key: "phone")
+    var phone: String?
+
+    @OptionalField(key: "date_of_birth")
+    var dateOfBirth: String?
+
+    @OptionalField(key: "gender")
+    var gender: String?
+
+    @OptionalField(key: "address")
+    var address: String?
+
+    @OptionalField(key: "city")
+    var city: String?
+
+    @OptionalField(key: "province")
+    var province: String?
+
+    @OptionalField(key: "postal_code")
+    var postalCode: String?
+
+    @OptionalField(key: "emergency_contact")
+    var emergencyContact: String?
+
+    @OptionalField(key: "emergency_phone")
+    var emergencyPhone: String?
+    // --------------------------
+
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
+    
+    @Timestamp(key: "updated_at", on: .update)
+    var updatedAt: Date?
 
     init() { }
 
@@ -39,9 +70,17 @@ final class User: Model, Content, @unchecked Sendable, Authenticatable {
         self.role = role
     }
     
-    // We hide the password hash when returning JSON
+    // Updated Public DTO
     func toPublic() -> Public {
-        Public(id: id, name: name, email: email, role: role, createdAt: createdAt)
+        Public(
+            id: id, 
+            name: name, 
+            email: email, 
+            role: role, 
+            createdAt: createdAt,
+            phone: phone,
+            address: address
+        )
     }
     
     struct Public: Content {
@@ -50,5 +89,7 @@ final class User: Model, Content, @unchecked Sendable, Authenticatable {
         var email: String
         var role: UserRole
         var createdAt: Date?
+        var phone: String?
+        var address: String?
     }
 }

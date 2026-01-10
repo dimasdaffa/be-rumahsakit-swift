@@ -24,6 +24,9 @@ final class Appointment: Model, Content {
     @Field(key: "reason")
     var reason: String // "Sakit kepala"
 
+    @OptionalField(key: "complaints")
+    var complaints: String?
+
     @Field(key: "status")
     var status: String // "pending", "approved", "rejected", "completed"
 
@@ -32,13 +35,14 @@ final class Appointment: Model, Content {
 
     init() { }
 
-    init(id: UUID? = nil, patientId: User.IDValue, doctorId: Doctor.IDValue, date: String, time: String, reason: String, status: String = "pending") {
+    init(id: UUID? = nil, patientId: User.IDValue, doctorId: Doctor.IDValue, date: String, time: String, reason: String, complaints: String? = nil, status: String = "pending") {
         self.id = id
         self.$patient.id = patientId
         self.$doctor.id = doctorId
         self.date = date
         self.time = time
         self.reason = reason
+        self.complaints = complaints
         self.status = status
     }
 }

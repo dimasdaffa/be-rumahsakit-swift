@@ -2,11 +2,14 @@ import Vapor
 import Fluent
 
 final class Doctor: Model, Content {
-    // Name of the table in MySQL
     static let schema = "doctors"
     
     @ID(key: .id)
     var id: UUID?
+    
+    // 🔗 Link to the Login User
+    @Parent(key: "user_id")
+    var user: User
     
     @Field(key: "name")
     var name: String
@@ -23,7 +26,6 @@ final class Doctor: Model, Content {
     @Field(key: "status")
     var status: String
     
-    // Optional Fields (matches your frontend form)
     @OptionalField(key: "license")
     var license: String?
     
@@ -45,12 +47,11 @@ final class Doctor: Model, Content {
     @Field(key: "rating")
     var rating: Double
 
-    // Required by Fluent
     init() { }
 
-    // Init for you to use in code
-    init(id: UUID? = nil, name: String, email: String, phone: String, specialty: String, status: String, license: String? = nil, experience: Int = 0, education: String? = nil, bio: String? = nil, joinDate: String? = nil, totalPatients: Int = 0, rating: Double = 0.0) {
+    init(id: UUID? = nil, userId: UUID, name: String, email: String, phone: String, specialty: String, status: String, license: String? = nil, experience: Int = 0, education: String? = nil, bio: String? = nil, joinDate: String? = nil, totalPatients: Int = 0, rating: Double = 0.0) {
         self.id = id
+        self.$user.id = userId // Set the User ID
         self.name = name
         self.email = email
         self.phone = phone

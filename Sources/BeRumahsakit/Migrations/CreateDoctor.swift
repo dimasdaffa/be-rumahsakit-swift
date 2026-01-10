@@ -7,20 +7,18 @@ struct CreateDoctor: AsyncMigration {
         if let sql = database as? SQLDatabase {
             let tables = try await sql.raw("SHOW TABLES LIKE 'doctors'").all()
             guard tables.isEmpty else {
-                database.logger.info("Table 'doctors' already exists, skipping creation.")
                 return
             }
         }
         
         try await database.schema("doctors")
             .id()
+            .field("user_id", .uuid, .required, .references("users", "id", onDelete: .cascade)) // 🔗 LINK TO USER
             .field("name", .string, .required)
             .field("email", .string, .required)
             .field("phone", .string, .required)
             .field("specialty", .string, .required)
             .field("status", .string, .required)
-            
-            // Missing fields added below:
             .field("license", .string)
             .field("experience", .int, .required)
             .field("education", .string)
@@ -28,7 +26,6 @@ struct CreateDoctor: AsyncMigration {
             .field("join_date", .string)
             .field("total_patients", .int, .required)
             .field("rating", .double, .required)
-            
             .create()
     }
     
