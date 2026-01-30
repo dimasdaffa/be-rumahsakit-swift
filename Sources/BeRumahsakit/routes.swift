@@ -51,6 +51,8 @@ func routes(_ app: Application) throws {
     try protected.register(collection: AppointmentController())
     try protected.register(collection: MedicalRecordController())
     try protected.register(collection: UserController())
+    try protected.register(collection: ClinicalNoteController())
+    try protected.register(collection: DoctorController())
 
     // ==========================================
     // 3. ADMIN ONLY ROUTES (Must be Admin) 👮‍♂️
@@ -58,7 +60,6 @@ func routes(_ app: Application) throws {
     // ONLY Admins can access these.
     // If a Patient/Doctor tries to access, they get 403 Forbidden.
     let adminOnly = protected.grouped(CheckRole(requiredRole: .admin))
-    try adminOnly.register(collection: DoctorController())
     try adminOnly.register(collection: ScheduleController())
     try adminOnly.register(collection: AnalyticsController())
 

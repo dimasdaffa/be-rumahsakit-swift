@@ -38,6 +38,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateAppointment())   // 4. Appointments link to both
     app.migrations.add(CreateMedicalRecord()) // 5. Records link to Appointment
     app.migrations.add(SeedAdminUser())
+    app.migrations.add(CreateClinicalNote())
 
     try routes(app)
 }
