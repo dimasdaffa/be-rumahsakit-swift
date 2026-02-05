@@ -104,6 +104,39 @@ POST /api/auth/change-password
 
 ---
 
+### Doctors (Public)
+
+#### List All Doctors
+```
+GET /api/doctors
+```
+**Response:** Array of `DoctorPublicResponse` objects
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Dr. Jane Smith",
+    "specialty": "Cardiology",
+    "status": "active",
+    "experience": 10,
+    "rating": 5.0,
+    "bio": "Specialist in heart diseases",
+    "education": "MD from University of Indonesia",
+    "license": "STR-12345"
+  }
+]
+```
+
+---
+
+#### Get Doctor Details
+```
+GET /api/doctors/:id
+```
+**Response:** `DoctorPublicResponse` object
+
+---
+
 ## 🔒 Protected Endpoints (Authentication Required)
 
 > **Note:** Include the JWT token in the Authorization header:
@@ -297,19 +330,141 @@ GET /api/medical-records/:id
 
 ---
 
+### Health Updates
+
+#### List Health Updates
+```
+GET /api/health-updates
+```
+**Access:** All authenticated users
+- **Patients:** See only their own health updates
+- **Doctors/Admins:** See all (or filter by `?patientId=uuid`)
+
+**Query Parameters:**
+- `patientId` (optional): Filter by patient UUID (Doctors/Admins only)
+
+**Response:** Array of `HealthUpdate` objects
+
+---
+
+#### Log Health Update
+```
+POST /api/health-updates
+```
+**Access:** All authenticated users
+- **Patients:** Create for themselves (no patientId needed)
+- **Doctors/Admins:** Must specify `patientId`
+
+**Request Body:**
+```json
+{
+  "date": "2024-06-01",
+  "weight": 70.5,
+  "height": 175.0,
+  "bloodPressure": "120/80",
+  "bloodSugar": 95.0,
+  "heartRate": 72,
+  "sleepHours": 7.5,
+  "mood": "good",
+  "notes": "Feeling well today",
+  "patientId": "uuid-of-patient"  // Required for Doctors/Admins
+}
+```
+**Response:** Created `HealthUpdate` object
+
+---
+
+#### Delete Health Update
+```
+DELETE /api/health-updates/:id
+```
+**Access:** Owner of health update or Admin
+
+**Response:** `204 No Content`
+
+---
+
+### Clinical Notes
+
+#### List Clinical Notes
+```
+GET /api/clinical-notes
+```
+**Access:** Doctors and Admins only
+- **Doctors:** See only notes they created
+- **Admins:** See all notes
+
+**Response:** Array of `ClinicalNote` objects
+
+---
+
+#### Create Clinical Note
+```
+POST /api/clinical-notes
+```
+**Access:** Doctors only
+
+**Request Body:**
+```json
+{
+  "patientId": "uuid-of-patient",
+  "appointmentId": "uuid-of-appointment",
+  "diagnosis": "Common cold",
+  "treatment": "Rest and hydration",
+  "notes": "Patient advised to rest for 3 days",
+  "followUp": "2024-06-15",
+  "status": "completed"  // "draft" or "completed"
+}
+```
+**Response:** Created `ClinicalNote` object
+
+---
+
+#### Get Clinical Note Details
+```
+GET /api/clinical-notes/:id
+```
+**Access:** Doctors and Admins
+
+**Response:** `ClinicalNote` object
+
+---
+
+#### Update Clinical Note
+```
+PUT /api/clinical-notes/:id
+```
+**Access:** Creator (Doctor) or Admin
+
+**Request Body:**
+```json
+{
+  "diagnosis": "Updated diagnosis",
+  "treatment": "Updated treatment",
+  "notes": "Updated notes",
+  "followUp": "2024-06-20",
+  "status": "completed"
+}
+```
+**Response:** Updated `ClinicalNote` object
+
+---
+
+#### Delete Clinical Note
+```
+DELETE /api/clinical-notes/:id
+```
+**Access:** Admin only
+
+**Response:** `204 No Content`
+
+---
+
 ## 👮 Admin Only Endpoints
 
 > **Note:** These endpoints require Admin role. Non-admin users will receive `403 Forbidden`.
 
 ### Doctors Management
-
-#### List All Doctors
-```
-GET /api/doctors
-```
-**Response:** Array of `Doctor` objects
-
----
 
 #### Create Doctor
 ```
@@ -320,6 +475,7 @@ POST /api/doctors
 {
   "name": "Dr. Jane Smith",
   "email": "jane.smith@hospital.com",
+  "password": "optionalPassword123",
   "phone": "+62812345678",
   "specialty": "Cardiology",
   "status": "active",
@@ -334,13 +490,7 @@ POST /api/doctors
 ```
 **Response:** Created `Doctor` object
 
----
-
-#### Get Doctor Details
-```
-GET /api/doctors/:id
-```
-**Response:** `Doctor` object
+> **Note:** If password is not provided, defaults to "password123". A User account with role "doctor" is automatically created.
 
 ---
 
@@ -348,7 +498,7 @@ GET /api/doctors/:id
 ```
 PUT /api/doctors/:id
 ```
-**Request Body:** Same as Create Doctor
+**Request Body:** Same as Create Doctor (excluding password)
 
 **Response:** Updated `Doctor` object
 
@@ -434,8 +584,8 @@ GET /api/analytics/dashboard
 | Role | Description |
 |------|-------------|
 | `admin` | Full access to all endpoints |
-| `doctor` | Can create medical records |
-| `patient` | Can book appointments, view own records |
+| `doctor` | Can create medical records and clinical notes |
+| `patient` | Can book appointments, view own records, log health updates |
 
 ### Appointment Status
 | Status | Description |
@@ -444,6 +594,12 @@ GET /api/analytics/dashboard
 | `approved` | Confirmed by admin |
 | `rejected` | Declined by admin |
 | `completed` | Medical record created |
+
+### Clinical Note Status
+| Status | Description |
+|--------|-------------|
+| `draft` | Note is still being edited |
+| `completed` | Note is finalized |
 
 ---
 
