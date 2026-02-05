@@ -1,4 +1,3 @@
-```markdown
 # BeRumahsakit API 🏥
 
 A robust Hospital Management System API built with **Swift Vapor**.
@@ -245,6 +244,33 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 
 `GET /api/health-updates`
 
+### 5. Schedules
+
+#### List Doctor Schedules
+
+`GET /api/schedules`
+
+> Returns all doctor schedules. Filter by doctor using query param.
+
+**Query Parameters:**
+- `doctorId` (optional): Filter schedules by doctor UUID
+
+**Response:**
+
+```json
+[
+  {
+    "id": "uuid",
+    "doctor": { "id": "doctor-uuid" },
+    "dayOfWeek": "Monday",
+    "startTime": "09:00",
+    "endTime": "17:00",
+    "isAvailable": true,
+    "createdAt": "2026-02-05T14:36:13Z"
+  }
+]
+```
+
 ---
 
 ## 🩺 Doctor & Admin Only
@@ -351,6 +377,62 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 
 ---
 
+## 🗓 Doctor Only
+
+### Schedule Management
+
+#### Create Schedule
+
+`POST /api/schedules`
+
+**Request:**
+
+```json
+{
+  "dayOfWeek": "Monday",
+  "startTime": "09:00",
+  "endTime": "17:00",
+  "isAvailable": true
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "uuid",
+  "doctor": { "id": "doctor-uuid" },
+  "dayOfWeek": "Monday",
+  "startTime": "09:00",
+  "endTime": "17:00",
+  "isAvailable": true,
+  "createdAt": "2026-02-05T14:36:13Z"
+}
+```
+
+#### Update Schedule
+
+`PUT /api/schedules/:id`
+
+**Request:**
+
+```json
+{
+  "dayOfWeek": "Tuesday",
+  "startTime": "10:00",
+  "endTime": "18:00",
+  "isAvailable": false
+}
+```
+
+#### Delete Schedule
+
+`DELETE /api/schedules/:id`
+
+> Returns `204 No Content` on success.
+
+---
+
 ## 🛠 Tech Stack
 
 * **Language:** Swift 5.9
@@ -359,7 +441,5 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 * **ORM:** Fluent
 * **Auth:** JWT (JSON Web Tokens)
 * **Container:** Docker
-
-```
 
 ```
