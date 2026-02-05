@@ -1,72 +1,91 @@
-# BeRumahsakit
+```markdown
+# BeRumahsakit API 🏥
 
-💧 RS Permata Sehat Hospital Management API - Built with Vapor web framework.
+A robust Hospital Management System API built with **Swift Vapor**.
+It features Role-Based Access Control (RBAC) for **Admins**, **Doctors**, and **Patients**.
 
-## Getting Started
+---
 
-To build the project using the Swift Package Manager, run the following command in the terminal from the root of the project:
-```bash
-swift build
+## 🚀 Getting Started
+
+### Prerequisites
+- Swift 5.9+
+- Docker (for MySQL database)
+
+### Installation
+1. **Start Database**
+   ```bash
+   docker-compose up -d db
+
 ```
 
-To run the project and start the server, use the following command:
+2. **Run Migrations** (Fresh install)
+```bash
+./migrate-fresh.sh
+
+```
+
+
+3. **Run Server**
 ```bash
 swift run
+
 ```
 
-To execute tests, use the following command:
-```bash
-swift test
-```
+
+
+The API will start at: `http://localhost:8080`
 
 ---
 
 ## 📚 API Documentation
 
 ### Base URL
+
 ```
 http://localhost:8080
+
 ```
-
-### Interactive Documentation
-- **Swagger UI**: `GET /api-docs`
-- **OpenAPI JSON**: `GET /swagger.json`
-
----
-
-## 🔓 Public Endpoints (No Authentication Required)
 
 ### Authentication
 
-#### Register New User
+Most endpoints require a **Bearer Token**. Include it in the header:
+
+```http
+Authorization: Bearer <YOUR_JWT_TOKEN>
+
 ```
-POST /api/auth/register
-```
-**Request Body:**
+
+---
+
+## 🔓 Public Endpoints
+
+### 1. Authentication
+
+#### Register (Patients Only)
+
+`POST /api/auth/register`
+
+> Doctors and Admins must be created by an Admin.
+
+**Request:**
+
 ```json
 {
   "name": "John Doe",
   "email": "john@example.com",
   "password": "securePassword123",
-  "role": "patient"  // "admin", "doctor", or "patient"
+  "role": "patient"
 }
-```
-**Response:** `User.Public` object
 
----
+```
 
 #### Login
-```
-POST /api/auth/login
-```
-**Request Body:**
-```json
-{
-  "email": "john@example.com",
-  "password": "securePassword123"
-}
-```
+
+`POST /api/auth/login`
+
 **Response:**
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIs...",
@@ -77,535 +96,270 @@ POST /api/auth/login
     "role": "patient"
   }
 }
+
 ```
 
----
-
-#### Change Password
-```
-POST /api/auth/change-password
-```
-**Access:** All authenticated users
-
-**Request Body:**
-```json
-{
-  "currentPassword": "oldPassword123",
-  "newPassword": "newSecurePassword456"
-}
-```
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Password updated successfully"
-}
-```
-
----
-
-### Doctors (Public)
+### 2. Doctors (Public Directory)
 
 #### List All Doctors
-```
-GET /api/doctors
-```
-**Response:** Array of `DoctorPublicResponse` objects
+
+`GET /api/doctors`
+
+> Returns a safe public profile (excludes sensitive user data).
+
+**Response:**
+
 ```json
 [
   {
     "id": "uuid",
-    "name": "Dr. Jane Smith",
-    "specialty": "Cardiology",
+    "name": "Dr. Stephen Strange",
+    "specialty": "Neurosurgery",
     "status": "active",
-    "experience": 10,
     "rating": 5.0,
-    "bio": "Specialist in heart diseases",
-    "education": "MD from University of Indonesia",
-    "license": "STR-12345"
+    "experience": 12
   }
 ]
+
 ```
 
 ---
 
-#### Get Doctor Details
-```
-GET /api/doctors/:id
-```
-**Response:** `DoctorPublicResponse` object
+## 🔒 Protected Endpoints (All Users)
 
----
+### 1. User Profile
 
-## 🔒 Protected Endpoints (Authentication Required)
+#### Get My Profile
 
-> **Note:** Include the JWT token in the Authorization header:
-> ```
-> Authorization: Bearer <your_token>
-> ```
+`GET /api/users/me`
 
-### Users
+#### Update My Profile
 
-#### Get Current User
-```
-GET /api/users/me
-```
-**Access:** All authenticated users
+`PUT /api/users/me`
 
-**Response:** `UserResponse` object
+**Request:**
 
----
-
-#### Update Current User Profile
-```
-PUT /api/users/me
-```
-**Access:** All authenticated users
-
-**Request Body:**
 ```json
 {
-  "name": "New Name",      // optional
-  "email": "new@email.com" // optional
+  "phone": "+62812345678",
+  "address": "Jl. Sudirman No. 1",
+  "city": "Jakarta",
+  "emergencyContact": "Jane Doe",
+  "emergencyPhone": "+62899999"
 }
+
 ```
-**Response:** Updated `UserResponse` object
 
----
+#### Change Password
 
-#### List All Patients
-```
-GET /api/users/patients
-```
-**Access:** Doctors and Admins only
+`POST /api/auth/change-password`
 
-**Response:** Array of `UserResponse` objects (patients only)
+**Request:**
 
----
-
-#### Get Patient Details
-```
-GET /api/users/patients/:id
-```
-**Access:** Doctors and Admins only
-
-**Response:** `UserResponse` object
-
----
-
-#### List All Users
-```
-GET /api/users
-```
-**Access:** Admin only
-
-**Response:** Array of `UserResponse` objects (all users)
-
----
-
-#### Get User Details
-```
-GET /api/users/:id
-```
-**Access:** Admin only
-
-**Response:** `UserResponse` object
-
----
-
-#### Update User
-```
-PUT /api/users/:id
-```
-**Access:** Admin only
-
-**Request Body:**
 ```json
 {
-  "name": "New Name",      // optional
-  "email": "new@email.com" // optional
+  "currentPassword": "oldPass",
+  "newPassword": "newPass"
 }
+
 ```
-**Response:** Updated `UserResponse` object
 
----
+### 2. Appointments
 
-#### Delete User
-```
-DELETE /api/users/:id
-```
-**Access:** Admin only
+#### List Appointments
 
-**Response:** `204 No Content`
+`GET /api/appointments`
 
----
+* **Patient:** Sees own appointments.
+* **Doctor:** Sees appointments assigned to them.
+* **Admin:** Sees all appointments.
 
-### Appointments
+#### Book Appointment
 
-#### List My Appointments
-```
-GET /api/appointments
-```
-**Access:** All authenticated users
-- **Patients:** See only their own appointments
-- **Admins:** See all appointments
+`POST /api/appointments`
 
-**Response:** Array of `Appointment` objects
+**Request:**
 
----
-
-#### Book New Appointment
-```
-POST /api/appointments
-```
-**Access:** All authenticated users
-
-**Request Body:**
 ```json
 {
   "doctorId": "uuid-of-doctor",
-  "date": "2024-06-01",
+  "date": "2026-02-01",
   "time": "09:00",
-  "reason": "Regular checkup"
+  "reason": "General Checkup",
+  "complaints": "Dizzy when standing"
 }
+
 ```
-**Response:** Created `Appointment` object (status: "pending")
+
+#### View Appointment Detail
+
+`GET /api/appointments/:id`
+
+### 3. Messaging
+
+#### List Messages
+
+`GET /api/messages`
+
+> Returns inbox and sent messages combined.
+
+#### Send Message
+
+`POST /api/messages`
+
+**Request:**
+
+```json
+{
+  "receiverId": "uuid-of-receiver",
+  "content": "Hello, I have a question about my prescription."
+}
+
+```
+
+#### Mark as Read
+
+`PUT /api/messages/:id/read`
+
+### 4. Health Tracker
+
+#### Log Health Update
+
+`POST /api/health-updates`
+
+**Request:**
+
+```json
+{
+  "date": "2026-02-01",
+  "weight": 70.5,
+  "bloodPressure": "120/80",
+  "heartRate": 72,
+  "mood": "Happy",
+  "notes": "Feeling better today"
+}
+
+```
+
+#### List Health Updates
+
+`GET /api/health-updates`
 
 ---
 
-#### View Single Appointment
-```
-GET /api/appointments/:id
-```
-**Access:** Owner of appointment or Admin
+## 🩺 Doctor & Admin Only
 
-**Response:** `Appointment` object with doctor and patient details
-
----
-
-### Medical Records
-
-#### List Medical Records
-```
-GET /api/medical-records
-```
-**Access:** All authenticated users
-- **Patients:** See only their own records
-- **Doctors/Admins:** See all records
-
-**Response:** Array of `MedicalRecord` objects
-
----
+### 1. Medical Records
 
 #### Create Medical Record
-```
-POST /api/medical-records
-```
-**Access:** Doctors and Admins
 
-**Request Body:**
+`POST /api/medical-records`
+
+> Automatically marks the appointment as "completed".
+
+**Request:**
+
 ```json
 {
   "appointmentId": "uuid-of-appointment",
-  "diagnosis": "Common cold",
-  "symptoms": "Fever, cough, runny nose",
-  "treatment": "Rest and hydration",
-  "prescription": "Paracetamol 500mg",
-  "notes": "Follow up in 1 week if symptoms persist"
+  "diagnosis": "Flu",
+  "symptoms": "Fever, Cough",
+  "treatment": "Rest",
+  "prescription": "Paracetamol",
+  "notes": "Drink water",
+  "followUpRequired": true,
+  "followUpDate": "2026-02-10",
+  "vitalSigns": {
+    "bloodPressure": "120/80",
+    "weight": "70"
+  }
 }
+
 ```
-**Response:** Created `MedicalRecord` object
 
-> **Note:** Creating a medical record automatically marks the appointment as "completed"
-
----
-
-#### View Medical Record Details
-```
-GET /api/medical-records/:id
-```
-**Access:** All authenticated users
-
-**Response:** `MedicalRecord` object
-
----
-
-### Health Updates
-
-#### List Health Updates
-```
-GET /api/health-updates
-```
-**Access:** All authenticated users
-- **Patients:** See only their own health updates
-- **Doctors/Admins:** See all (or filter by `?patientId=uuid`)
-
-**Query Parameters:**
-- `patientId` (optional): Filter by patient UUID (Doctors/Admins only)
-
-**Response:** Array of `HealthUpdate` objects
-
----
-
-#### Log Health Update
-```
-POST /api/health-updates
-```
-**Access:** All authenticated users
-- **Patients:** Create for themselves (no patientId needed)
-- **Doctors/Admins:** Must specify `patientId`
-
-**Request Body:**
-```json
-{
-  "date": "2024-06-01",
-  "weight": 70.5,
-  "height": 175.0,
-  "bloodPressure": "120/80",
-  "bloodSugar": 95.0,
-  "heartRate": 72,
-  "sleepHours": 7.5,
-  "mood": "good",
-  "notes": "Feeling well today",
-  "patientId": "uuid-of-patient"  // Required for Doctors/Admins
-}
-```
-**Response:** Created `HealthUpdate` object
-
----
-
-#### Delete Health Update
-```
-DELETE /api/health-updates/:id
-```
-**Access:** Owner of health update or Admin
-
-**Response:** `204 No Content`
-
----
-
-### Clinical Notes
-
-#### List Clinical Notes
-```
-GET /api/clinical-notes
-```
-**Access:** Doctors and Admins only
-- **Doctors:** See only notes they created
-- **Admins:** See all notes
-
-**Response:** Array of `ClinicalNote` objects
-
----
+### 2. Clinical Notes (Internal)
 
 #### Create Clinical Note
-```
-POST /api/clinical-notes
-```
-**Access:** Doctors only
 
-**Request Body:**
+`POST /api/clinical-notes`
+
+**Request:**
+
 ```json
 {
   "patientId": "uuid-of-patient",
   "appointmentId": "uuid-of-appointment",
-  "diagnosis": "Common cold",
-  "treatment": "Rest and hydration",
-  "notes": "Patient advised to rest for 3 days",
-  "followUp": "2024-06-15",
-  "status": "completed"  // "draft" or "completed"
+  "diagnosis": "Suspected Typhoid",
+  "treatment": "Further lab tests required",
+  "notes": "Patient looks pale",
+  "status": "draft"
 }
+
 ```
-**Response:** Created `ClinicalNote` object
+
+### 3. Patient Management
+
+#### List All Patients
+
+`GET /api/users/patients`
+
+#### Get Patient Detail
+
+`GET /api/users/patients/:id`
 
 ---
 
-#### Get Clinical Note Details
-```
-GET /api/clinical-notes/:id
-```
-**Access:** Doctors and Admins
+## 👮 Admin Only
 
-**Response:** `ClinicalNote` object
+### 1. User Management
 
----
+* `POST /api/users` - Create any user (Admin, Doctor, Patient).
+* `GET /api/users` - List all system users.
+* `DELETE /api/users/:id` - Delete a user.
 
-#### Update Clinical Note
-```
-PUT /api/clinical-notes/:id
-```
-**Access:** Creator (Doctor) or Admin
+### 2. Doctor Management
 
-**Request Body:**
+* `POST /api/doctors` - Create a Doctor (Profile + User Account).
+* `PUT /api/doctors/:id` - Update Doctor.
+* `DELETE /api/doctors/:id` - Delete Doctor.
+
+**Create Doctor Request:**
+
 ```json
 {
-  "diagnosis": "Updated diagnosis",
-  "treatment": "Updated treatment",
-  "notes": "Updated notes",
-  "followUp": "2024-06-20",
-  "status": "completed"
-}
-```
-**Response:** Updated `ClinicalNote` object
-
----
-
-#### Delete Clinical Note
-```
-DELETE /api/clinical-notes/:id
-```
-**Access:** Admin only
-
-**Response:** `204 No Content`
-
----
-
-## 👮 Admin Only Endpoints
-
-> **Note:** These endpoints require Admin role. Non-admin users will receive `403 Forbidden`.
-
-### Doctors Management
-
-#### Create Doctor
-```
-POST /api/doctors
-```
-**Request Body:**
-```json
-{
-  "name": "Dr. Jane Smith",
-  "email": "jane.smith@hospital.com",
-  "password": "optionalPassword123",
-  "phone": "+62812345678",
-  "specialty": "Cardiology",
+  "name": "Dr. Strange",
+  "email": "strange@hospital.com",
+  "password": "optionalPassword",
+  "phone": "08123456789",
+  "specialty": "Magic",
   "status": "active",
-  "license": "STR-12345",
   "experience": 10,
-  "education": "MD from University of Indonesia",
-  "bio": "Specialist in heart diseases",
-  "joinDate": "2020-01-15",
   "totalPatients": 0,
   "rating": 5.0
 }
-```
-**Response:** Created `Doctor` object
 
-> **Note:** If password is not provided, defaults to "password123". A User account with role "doctor" is automatically created.
+```
+
+### 3. Appointment Actions
+
+* `PUT /api/appointments/:id/approve`
+* `PUT /api/appointments/:id/reject`
+
+### 4. Analytics
+
+* `GET /api/analytics/dashboard`
 
 ---
 
-#### Update Doctor
-```
-PUT /api/doctors/:id
-```
-**Request Body:** Same as Create Doctor (excluding password)
+## 🛠 Tech Stack
 
-**Response:** Updated `Doctor` object
+* **Language:** Swift 5.9
+* **Framework:** Vapor 4
+* **Database:** MySQL 8.0
+* **ORM:** Fluent
+* **Auth:** JWT (JSON Web Tokens)
+* **Container:** Docker
 
----
-
-#### Delete Doctor
-```
-DELETE /api/doctors/:id
-```
-**Response:** `204 No Content`
-
----
-
-### Schedules Management
-
-#### List Schedules
-```
-GET /api/schedules
-```
-**Query Parameters:**
-- `doctorId` (optional): Filter by doctor UUID
-
-**Response:** Array of `Schedule` objects
-
----
-
-#### Generate Schedule Slots
-```
-POST /api/schedules/generate
-```
-**Request Body:**
-```json
-{
-  "doctorId": "uuid-of-doctor",
-  "date": "2024-01-30"
-}
-```
-**Response:** `201 Created`
-
-> **Note:** Automatically creates time slots: 09:00, 10:00, 11:00, 13:00, 14:00, 15:00
-
----
-
-### Appointment Management (Admin Actions)
-
-#### Approve Appointment
-```
-PUT /api/appointments/:id/approve
-```
-**Response:** Updated `Appointment` object (status: "approved")
-
----
-
-#### Reject Appointment
-```
-PUT /api/appointments/:id/reject
-```
-**Response:** Updated `Appointment` object (status: "rejected")
-
----
-
-### Analytics Dashboard
-
-#### Get Dashboard Statistics
-```
-GET /api/analytics/dashboard
-```
-**Response:**
-```json
-{
-  "totalPatients": 150,
-  "totalDoctors": 25,
-  "pendingAppointments": 10,
-  "completedToday": 5
-}
 ```
 
----
-
-## 📋 Data Models
-
-### User Roles
-| Role | Description |
-|------|-------------|
-| `admin` | Full access to all endpoints |
-| `doctor` | Can create medical records and clinical notes |
-| `patient` | Can book appointments, view own records, log health updates |
-
-### Appointment Status
-| Status | Description |
-|--------|-------------|
-| `pending` | Awaiting admin approval |
-| `approved` | Confirmed by admin |
-| `rejected` | Declined by admin |
-| `completed` | Medical record created |
-
-### Clinical Note Status
-| Status | Description |
-|--------|-------------|
-| `draft` | Note is still being edited |
-| `completed` | Note is finalized |
-
----
-
-## 🔗 See More
-
-- [Vapor Website](https://vapor.codes)
-- [Vapor Documentation](https://docs.vapor.codes)
-- [Vapor GitHub](https://github.com/vapor)
-- [Vapor Community](https://github.com/vapor-community)
+```
