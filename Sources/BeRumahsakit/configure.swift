@@ -40,6 +40,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(SeedAdminUser())
     app.migrations.add(CreateClinicalNote())
     app.migrations.add(CreateHealthUpdate())
+    app.migrations.add(CreateMessage())
 
     try routes(app)
 }
