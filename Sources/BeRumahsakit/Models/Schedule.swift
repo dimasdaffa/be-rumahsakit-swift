@@ -7,26 +7,32 @@ final class Schedule: Model, Content {
     @ID(key: .id)
     var id: UUID?
 
-    // 🔗 RELATIONSHIP: Links this schedule to a Doctor
     @Parent(key: "doctor_id")
     var doctor: Doctor
 
-    @Field(key: "date")
-    var date: String // Format: "2024-01-30"
+    @Field(key: "day_of_week")
+    var dayOfWeek: String
 
-    @Field(key: "time")
-    var time: String // Format: "09:00"
+    @Field(key: "start_time")
+    var startTime: String
+
+    @Field(key: "end_time")
+    var endTime: String
 
     @Field(key: "is_available")
     var isAvailable: Bool
 
+    @Timestamp(key: "created_at", on: .create)
+    var createdAt: Date?
+
     init() { }
 
-    init(id: UUID? = nil, doctorId: Doctor.IDValue, date: String, time: String, isAvailable: Bool = true) {
+    init(id: UUID? = nil, doctorId: UUID, dayOfWeek: String, startTime: String, endTime: String, isAvailable: Bool = true) {
         self.id = id
-        self.$doctor.id = doctorId // Set the foreign key
-        self.date = date
-        self.time = time
+        self.$doctor.id = doctorId
+        self.dayOfWeek = dayOfWeek
+        self.startTime = startTime
+        self.endTime = endTime
         self.isAvailable = isAvailable
     }
 }

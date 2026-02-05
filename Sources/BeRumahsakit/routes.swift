@@ -8,7 +8,7 @@ func routes(_ app: Application) throws {
     // ==========================================
     try app.register(collection: AuthController())
     
-    // Swagger Documentation
+    // Swagger Documentation (Keep as is)
     app.get("swagger.json") { req in
         app.routes.openAPI(info: InfoObject(title: "RS Permata Sehat API", version: "1.0.0"))
     }
@@ -44,7 +44,9 @@ func routes(_ app: Application) throws {
     // ==========================================
     // 2. PROTECTED ROUTES (Must have Token) 🔒
     // ==========================================
-    // All logged-in users can access these (Patient, Doctor, or Admin)
+    // All logged-in users (Patient, Doctor, Admin) can access these.
+    // The Controllers themselves handle specific permissions internally.
+    
     let protected = app.grouped(UserAuthenticator())
                        .grouped(User.guardMiddleware())
 
@@ -55,17 +57,19 @@ func routes(_ app: Application) throws {
     try protected.register(collection: DoctorController())
     try protected.register(collection: HealthUpdateController())
     try protected.register(collection: MessageController())
+    
+    // ✅ MOVED HERE: ScheduleController needs to be accessible by Patients (to view) and Doctors (to edit).
+    try protected.register(collection: ScheduleController())
 
     // ==========================================
     // 3. ADMIN ONLY ROUTES (Must be Admin) 👮‍♂️
     // ==========================================
-    // ONLY Admins can access these.
-    // If a Patient/Doctor tries to access, they get 403 Forbidden.
     let adminOnly = protected.grouped(CheckRole(requiredRole: .admin))
-    try adminOnly.register(collection: ScheduleController())
+    
     try adminOnly.register(collection: AnalyticsController())
 
-    // Appointment Approval/Rejection Routes (Admin Only)
+    // Appointment Approval/Rejection Routes
+    // (Ideally, move these into AppointmentController logic, but this works for now)
     let appointmentAdmin = adminOnly.grouped("api", "appointments")
     appointmentAdmin.put(":id", "approve", use: AppointmentController().approve)
     appointmentAdmin.put(":id", "reject", use: AppointmentController().reject)

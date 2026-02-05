@@ -14,10 +14,12 @@ struct CreateSchedule: AsyncMigration {
         
         try await database.schema("schedules")
             .id()
-            .field("doctor_id", .uuid, .required, .references("doctors", "id")) // 🔗 Foreign Key
-            .field("date", .string, .required)
-            .field("time", .string, .required)
-            .field("is_available", .bool, .required)
+            .field("doctor_id", .uuid, .required, .references("doctors", "id"))
+            .field("day_of_week", .string, .required) // e.g., "Monday", "Tuesday"
+            .field("start_time", .string, .required) // "09:00"
+            .field("end_time", .string, .required)   // "17:00"
+            .field("is_available", .bool, .required, .sql(.default(true)))
+            .field("created_at", .datetime)
             .create()
     }
 
