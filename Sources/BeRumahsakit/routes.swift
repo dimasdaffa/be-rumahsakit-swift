@@ -53,6 +53,7 @@ func routes(_ app: Application) throws {
     try protected.register(collection: UserController())
     try protected.register(collection: ClinicalNoteController())
     try protected.register(collection: DoctorController())
+    try protected.register(collection: HealthUpdateController())
 
     // ==========================================
     // 3. ADMIN ONLY ROUTES (Must be Admin) 👮‍♂️
