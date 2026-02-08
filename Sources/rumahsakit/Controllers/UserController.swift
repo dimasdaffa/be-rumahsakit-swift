@@ -130,7 +130,7 @@ struct UserController: RouteCollection {
         
         // Access Control: Only Doctor or Admin
         guard user.role == .doctor || user.role == .admin else {
-            throw Abort(.forbidden)
+            throw Abort(.forbidden, reason: "Only doctors can view full patient details")
         }
         
         // Find the patient

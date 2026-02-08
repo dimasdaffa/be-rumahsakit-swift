@@ -44,6 +44,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateClinicalNote())
     app.migrations.add(CreateHealthUpdate())
     app.migrations.add(CreateMessage())
+    app.migrations.add(CreateSystemAlert())
 
     // 6. FILE MIDDLEWARE (Serve files from /Public folder)
     // Ensure you create a folder named "Public" in your project root!

@@ -66,6 +66,7 @@ func routes(_ app: Application) throws {
     let adminOnly = protected.grouped(CheckRole(requiredRole: .admin))
     
     try adminOnly.register(collection: AnalyticsController())
+    try adminOnly.register(collection: SystemAlertController())
 
     // Appointment Approval/Rejection Routes
     // (Ideally, move these into AppointmentController logic, but this works for now)
