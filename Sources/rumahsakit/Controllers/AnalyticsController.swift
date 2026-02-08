@@ -20,6 +20,9 @@ struct AnalyticsController: RouteCollection {
         // 3. Doctor Performance
         analytics.get("doctors", use: getDoctorStats)
             .openAPI(summary: "Get doctor performance metrics")
+
+        analytics.get("health", use: getHealthStats)
+            .openAPI(summary: "Get top diagnosis trends")
     }
 
     @Sendable
@@ -93,5 +96,26 @@ struct AnalyticsController: RouteCollection {
 
         // Sort by busiest (most appointments)
         return stats.sorted { $0.appointmentCount > $1.appointmentCount }
+    }
+
+    @Sendable
+    func getHealthStats(req: Request) async throws -> [HealthStatsResponse] {
+        // Fetch all diagnoses
+        // Note: For large datasets, use raw SQL 'GROUP BY'. For now, in-memory is fine.
+        let records = try await MedicalRecord.query(on: req.db).all()
+
+        // Count occurrences
+        var counts: [String: Int] = [:]
+        for record in records {
+            let diag = record.diagnosis.trimmingCharacters(in: .whitespacesAndNewlines).capitalized
+            counts[diag, default: 0] += 1
+        }
+
+        // Sort by most common and take top 5
+        let sorted = counts.map { HealthStatsResponse(diagnosis: $0.key, count: $0.value) }
+            .sorted { $0.count > $1.count }
+            .prefix(5)
+
+        return Array(sorted)
     }
 }

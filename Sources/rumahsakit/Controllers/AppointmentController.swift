@@ -10,6 +10,9 @@ struct AppointmentController: RouteCollection {
         appointments.get(use: index)
             .openAPI(summary: "List Appointments")
 
+        appointments.get("today", use: getToday)
+            .openAPI(summary: "Get appointments for today")
+
         // CREATE
         appointments.post(use: create)
             .openAPI(
@@ -21,11 +24,11 @@ struct AppointmentController: RouteCollection {
         appointments.get(":id", use: show)
             .openAPI(summary: "Get Appointment Details")
 
-        // DELETE (Cancel) 
+        // DELETE (Cancel)
         appointments.delete(":id", use: delete)
             .openAPI(summary: "Cancel/Delete an appointment")
 
-        // COMPLETE (Doctor Only) 
+        // COMPLETE (Doctor Only)
         let doctorGroup = appointments.grouped(CheckRole(requiredRole: .doctor))
         doctorGroup.put(":id", "complete", use: complete)
             .openAPI(summary: "Mark appointment as completed (Doctor only)")
@@ -206,27 +209,67 @@ struct AppointmentController: RouteCollection {
     @Sendable
     func complete(req: Request) async throws -> Appointment {
         let user = try req.auth.require(User.self)
-        
-        guard let appointment = try await Appointment.find(req.parameters.get("id"), on: req.db) else {
+
+        guard let appointment = try await Appointment.find(req.parameters.get("id"), on: req.db)
+        else {
             throw Abort(.notFound)
         }
-        
+
         // Verify this appointment belongs to the logged-in Doctor
         // 1. Get Doctor Profile
-        guard let doctorProfile = try await Doctor.query(on: req.db)
-            .filter(\.$user.$id == user.id!)
-            .first() else {
+        guard
+            let doctorProfile = try await Doctor.query(on: req.db)
+                .filter(\.$user.$id == user.id!)
+                .first()
+        else {
             throw Abort(.forbidden, reason: "Doctor profile not found")
         }
-        
+
         // 2. Check assignment
         guard appointment.$doctor.id == doctorProfile.id else {
             throw Abort(.forbidden, reason: "You can only complete your own appointments")
         }
-        
+
         appointment.status = "completed"
         try await appointment.save(on: req.db)
-        
+
         return appointment
+    }
+
+    // GET /api/appointments/today
+    @Sendable
+    func getToday(req: Request) async throws -> [Appointment] {
+        let user = try req.auth.require(User.self)
+
+        // Get today's date string (YYYY-MM-DD)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        // Ensure timezone matches your server/user preference (e.g., GMT+7 for Indonesia)
+        formatter.timeZone = TimeZone(identifier: "Asia/Jakarta")
+        let todayString = formatter.string(from: Date())
+
+        // Base Query
+        let query = Appointment.query(on: req.db)
+            .filter(\.$date == todayString)
+            .with(\.$patient)
+            .with(\.$doctor)
+
+        // Access Control
+        if user.role == .doctor {
+            // Doctors only see THEIR appointments for today
+            guard
+                let doctor = try await Doctor.query(on: req.db).filter(\.$user.$id == user.id!)
+                    .first()
+            else {
+                throw Abort(.forbidden)
+            }
+            query.filter(\.$doctor.$id == doctor.id!)
+        } else if user.role == .patient {
+            // Patients see THEIR appointments
+            query.filter(\.$patient.$id == user.id!)
+        }
+        // Admins see ALL
+
+        return try await query.all()
     }
 }

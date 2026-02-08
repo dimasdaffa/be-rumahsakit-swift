@@ -1,32 +1,35 @@
-import Vapor
 import Fluent
+import Vapor
 import VaporToOpenAPI
 
 struct MedicalRecordController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let records = routes.grouped("api", "medical-records")
-        
+
         // LIST & SHOW
         records.get(use: index)
             .openAPI(summary: "List Medical Records")
-        
+
         records.get(":id", use: show)
             .openAPI(summary: "Get Medical Record Details")
-        
+
+        records.get("patient", ":patientId", use: getByPatient)
+            .openAPI(summary: "Get records for a specific patient")
+
         // CREATE (Doctor/Admin)
         records.post(use: create)
             .openAPI(
                 summary: "Create Medical Record",
                 body: .type(CreateMedicalRecordRequest.self)
             )
-            
-        // UPDATE & DELETE 
+
+        // UPDATE & DELETE
         records.put(":id", use: update)
             .openAPI(
                 summary: "Update Medical Record",
                 body: .type(UpdateMedicalRecordRequest.self)
             )
-            
+
         records.delete(":id", use: delete)
             .openAPI(summary: "Delete Medical Record")
     }
@@ -41,37 +44,37 @@ struct MedicalRecordController: RouteCollection {
         }
 
         let input = try req.content.decode(CreateMedicalRecordRequest.self)
-        
+
         // Find appointment
         guard let appointment = try await Appointment.find(input.appointmentId, on: req.db) else {
             throw Abort(.notFound, reason: "Appointment not found")
         }
-        
+
         // Create Record
         let record = MedicalRecord(
             appointmentId: input.appointmentId,
-            patientId: appointment.$patient.id, // Auto-link to Patient from Appointment
+            patientId: appointment.$patient.id,  // Auto-link to Patient from Appointment
             diagnosis: input.diagnosis,
             symptoms: input.symptoms,
             treatment: input.treatment,
             prescription: input.prescription,
             notes: input.notes,
-            
+
             // New Fields
             followUpRequired: input.followUpRequired,
             followUpDate: input.followUpDate,
-            
+
             // Unpack Vitals
             vitalBloodPressure: input.vitalSigns?.bloodPressure,
             vitalHeartRate: input.vitalSigns?.heartRate,
             vitalTemperature: input.vitalSigns?.temperature,
             vitalWeight: input.vitalSigns?.weight
         )
-        
+
         // Automatically mark appointment as "completed"
         appointment.status = "completed"
         try await appointment.save(on: req.db)
-        
+
         try await record.save(on: req.db)
         return record
     }
@@ -80,7 +83,7 @@ struct MedicalRecordController: RouteCollection {
     @Sendable
     func index(req: Request) async throws -> [MedicalRecord] {
         let user = try req.auth.require(User.self)
-        
+
         if user.role == .patient {
             // Patient: See MY records
             return try await MedicalRecord.query(on: req.db)
@@ -95,12 +98,12 @@ struct MedicalRecordController: RouteCollection {
                 .all()
         }
     }
-    
+
     // 3. SHOW DETAIL
     @Sendable
     func show(req: Request) async throws -> MedicalRecord {
         guard let record = try await MedicalRecord.find(req.parameters.get("id"), on: req.db) else {
-             throw Abort(.notFound)
+            throw Abort(.notFound)
         }
         // Ideally add security check here (is this my record?)
         return record
@@ -110,40 +113,44 @@ struct MedicalRecordController: RouteCollection {
     @Sendable
     func update(req: Request) async throws -> MedicalRecord {
         let user = try req.auth.require(User.self)
-        
+
         guard let record = try await MedicalRecord.find(req.parameters.get("id"), on: req.db) else {
             throw Abort(.notFound)
         }
-        
+
         // Authorization: Admin OR the Doctor who owns the appointment
         if user.role == .doctor {
             // Eager load the appointment -> doctor relationship to verify ownership
             // Note: This requires the record to be loaded with appointment/doctor info
-            // For simplicity, we query the appointment separately if needed, 
+            // For simplicity, we query the appointment separately if needed,
             // or assume if user is doctor, they must verify against the record's appointment.
-            
+
             // Let's verify via Appointment linkage
-            guard let appointment = try await Appointment.find(record.$appointment.id, on: req.db) else {
+            guard let appointment = try await Appointment.find(record.$appointment.id, on: req.db)
+            else {
                 throw Abort(.notFound, reason: "Associated appointment not found")
             }
-            
+
             // Get Doctor Profile of current user
-            guard let doctorProfile = try await Doctor.query(on: req.db)
-                .filter(\.$user.$id == user.id!)
-                .first() else {
+            guard
+                let doctorProfile = try await Doctor.query(on: req.db)
+                    .filter(\.$user.$id == user.id!)
+                    .first()
+            else {
                 throw Abort(.forbidden, reason: "Doctor profile not found")
             }
-            
+
             guard appointment.$doctor.id == doctorProfile.id else {
-                throw Abort(.forbidden, reason: "You can only edit records for your own appointments")
+                throw Abort(
+                    .forbidden, reason: "You can only edit records for your own appointments")
             }
         } else if user.role != .admin {
             throw Abort(.forbidden)
         }
-        
+
         // Decode Update Data
         let input = try req.content.decode(UpdateMedicalRecordRequest.self)
-        
+
         if let d = input.diagnosis { record.diagnosis = d }
         if let s = input.symptoms { record.symptoms = s }
         if let t = input.treatment { record.treatment = t }
@@ -151,7 +158,7 @@ struct MedicalRecordController: RouteCollection {
         if let n = input.notes { record.notes = n }
         if let fr = input.followUpRequired { record.followUpRequired = fr }
         if let fd = input.followUpDate { record.followUpDate = fd }
-        
+
         // Update Vitals (Flattened)
         if let v = input.vitalSigns {
             if let bp = v.bloodPressure { record.vitalBloodPressure = bp }
@@ -159,28 +166,54 @@ struct MedicalRecordController: RouteCollection {
             if let temp = v.temperature { record.vitalTemperature = temp }
             if let w = v.weight { record.vitalWeight = w }
         }
-        
+
         try await record.save(on: req.db)
         return record
     }
-    
+
     // 5. DELETE RECORD
     @Sendable
     func delete(req: Request) async throws -> HTTPStatus {
         let user = try req.auth.require(User.self)
-        
+
         guard let record = try await MedicalRecord.find(req.parameters.get("id"), on: req.db) else {
             throw Abort(.notFound)
         }
-        
+
         // Authorization: Admin Only (Medical records are sensitive)
-        // Or strictly allow the creating doctor. 
+        // Or strictly allow the creating doctor.
         // For safety, let's keep DELETE to Admins only for now.
         guard user.role == .admin else {
             throw Abort(.forbidden, reason: "Only Admins can delete medical records")
         }
-        
+
         try await record.delete(on: req.db)
         return .noContent
+    }
+    
+    // 6. GET RECORDS BY PATIENT
+    @Sendable
+    func getByPatient(req: Request) async throws -> [MedicalRecord] {
+        let user = try req.auth.require(User.self)
+        guard let patientId = req.parameters.get("patientId", as: UUID.self) else {
+            throw Abort(.badRequest)
+        }
+        
+        // Access Control
+        if user.role == .patient {
+            // Patients can only see THEIR OWN records
+            guard user.id == patientId else {
+                throw Abort(.forbidden, reason: "You can only view your own records")
+            }
+        }
+        // Doctors and Admins can view anyone's records
+        
+        return try await MedicalRecord.query(on: req.db)
+            .filter(\.$patient.$id == patientId)
+            .sort(\.$createdAt, .descending) // Newest first
+            .with(\.$appointment) { appointment in
+                appointment.with(\.$doctor) // Load doctor through appointment
+            }
+            .all()
     }
 }

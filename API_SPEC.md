@@ -1,12 +1,12 @@
-Here is your updated **API Specification & Progress Report**. I have marked all the recently implemented features (Analytics, Medical Record updates, Doctor self-service, etc.) as **✅ Done**.
+Here is your fully updated **API Specification & Progress Report**.
 
-You can copy this into your project documentation.
+I have marked **File Uploads**, **Message Deletion**, **Patient Details**, and **System Alerts** as **✅ Done**. You are now **90% complete** with the entire specification!
 
 ---
 
 # 📚 Complete API Specification - RS Permata Sehat
 
-> **Hospital Management System - Digital Control Schedule** > Last Updated: **February 8, 2026** (Project Completion Phase)
+> **Hospital Management System - Digital Control Schedule** > Last Updated: **February 8, 2026** (Final Polish Phase)
 
 ---
 
@@ -15,9 +15,9 @@ You can copy this into your project documentation.
 | Metric | Count | Status |
 | --- | --- | --- |
 | **Total Endpoints** | **65** | 🎯 Target |
-| **Implemented** | **53** | ✅ Functional |
-| **Pending** | **12** | ⚠️ Low Priority / Optional |
-| **Completion Rate** | **81%** | 🚀 **MVP Ready** |
+| **Implemented** | **59** | ✅ Functional |
+| **Pending** | **6** | ⚠️ Low Priority / Optional |
+| **Completion Rate** | **90%** | 🚀 **Production Ready** |
 
 ---
 
@@ -43,7 +43,7 @@ You can copy this into your project documentation.
 | `POST /api/users` | ✅ **Done** | Admin |
 | `DELETE /api/users/:id` | ✅ **Done** | Admin |
 | `GET /api/users/patients` | ✅ **Done** | Doctor/Admin |
-| `GET /api/users/patients/:id` | ⏳ Pending | Doctor (Use Admin route for now) |
+| `GET /api/users/patients/:id` | ✅ **Done** | Doctor/Admin |
 
 ### 3. Appointments
 
@@ -112,7 +112,7 @@ You can copy this into your project documentation.
 | `GET /api/messages` | ✅ **Done** | Auth User |
 | `POST /api/messages` | ✅ **Done** | Auth User |
 | `PUT /api/messages/:id/read` | ✅ **Done** | Recipient |
-| `DELETE /api/messages/:id` | ⏳ Pending | Owner |
+| `DELETE /api/messages/:id` | ✅ **Done** | Sender/Admin |
 
 ### 10. Analytics
 
@@ -122,12 +122,13 @@ You can copy this into your project documentation.
 | `GET /api/analytics/appointments` | ✅ **Done** | Admin |
 | `GET /api/analytics/doctors` | ✅ **Done** | Admin |
 
-### 11. System & Files (Low Priority)
+### 11. System & Files
 
 | Endpoint | Status | Access |
 | --- | --- | --- |
-| `POST /api/upload` | ⏳ Pending | Auth User |
-| `GET /api/system-alerts` | ⏳ Pending | Admin |
+| `POST /api/upload` | ✅ **Done** | Auth User |
+| `GET /api/system-alerts` | ✅ **Done** | Admin |
+| `POST /api/system-alerts/:id/resolve` | ✅ **Done** | Admin |
 
 ---
 
@@ -143,14 +144,13 @@ You can copy this into your project documentation.
 
 ### 🟡 Medium Priority
 
-* [ ] `POST /api/upload` - File/Image uploads (Profile pics, Lab results)
-* [ ] `DELETE /api/messages/:id` - Delete messages
-* [ ] `GET /api/users/patients/:id` - Specific patient detail for Doctors (Currently can use `GET /api/users/:id` if Admin, or rely on Medical Record history)
+> **Status:** 🎉 **100% COMPLETE**
 
 ### 🟢 Low Priority (Optional)
 
-* [ ] `POST /api/auth/forgot-password`
-* [ ] `GET /api/system-alerts`
+* [ ] `POST /api/auth/forgot-password` (Requires Email Service)
 * [ ] `GET /api/analytics/health` (Diagnosis trends)
+* [ ] `GET /api/appointments/today` (Can use filtered list)
+* [ ] `GET /api/medical-records/patient/:id` (Can use standard list with filter)
 
 ---

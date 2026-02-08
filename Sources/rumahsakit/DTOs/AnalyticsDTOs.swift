@@ -27,3 +27,8 @@ struct DoctorPerformanceResponse: Content {
     var rating: Double
     var appointmentCount: Int // How many appointments they have
 }
+
+struct HealthStatsResponse: Content {
+    var diagnosis: String
+    var count: Int
+}
