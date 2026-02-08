@@ -1,7 +1,27 @@
+```markdown
 # BeRumahsakit API 🏥
 
 A robust Hospital Management System API built with **Swift Vapor**.
 It features Role-Based Access Control (RBAC) for **Admins**, **Doctors**, and **Patients**.
+
+---
+
+## 🏆 Project Summary & Status
+
+> **Current Status:** 🚀 **Production Ready (v1.0)** > **Completion:** 95% Complete
+
+This API serves as the backend for a comprehensive Digital Hospital System. It includes:
+
+| Feature | Status | Description |
+| :--- | :---: | :--- |
+| **Authentication** | ✅ | JWT-based Auth, Password Management |
+| **RBAC** | ✅ | Strict separation of Patient, Doctor, and Admin roles |
+| **Appointments** | ✅ | Booking, Approving, Rejecting, and Cancelling |
+| **Medical Records** | ✅ | Digital diagnosis, prescriptions, and history |
+| **Scheduling** | ✅ | Doctor availability management |
+| **Messaging** | ✅ | Internal chat system between users |
+| **Analytics** | ✅ | Dashboards for health trends and doctor performance |
+| **File System** | ✅ | Uploading profile pictures and documents |
 
 ---
 
@@ -46,9 +66,9 @@ http://localhost:8080
 
 ```
 
-### Authentication
+### Authentication Header
 
-Most endpoints require a **Bearer Token**. Include it in the header:
+Most endpoints require a **Bearer Token**:
 
 ```http
 Authorization: Bearer <YOUR_JWT_TOKEN>
@@ -59,13 +79,9 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 
 ## 🔓 Public Endpoints
 
-### 1. Authentication
-
-#### Register (Patients Only)
+### 1. Register (Patients Only)
 
 `POST /api/auth/register`
-
-> Doctors and Admins must be created by an Admin.
 
 **Request:**
 
@@ -79,9 +95,32 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 
 ```
 
-#### Login
+**Response:**
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "role": "patient",
+  "createdAt": "2026-02-08T10:00:00Z"
+}
+
+```
+
+### 2. Login
 
 `POST /api/auth/login`
+
+**Request:**
+
+```json
+{
+  "email": "john@example.com",
+  "password": "securePassword123"
+}
+
+```
 
 **Response:**
 
@@ -89,7 +128,7 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 {
   "token": "eyJhbGciOiJIUzI1NiIs...",
   "user": {
-    "id": "uuid",
+    "id": "123e4567-e89b-12d3-a456-426614174000",
     "name": "John Doe",
     "email": "john@example.com",
     "role": "patient"
@@ -98,25 +137,23 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 
 ```
 
-### 2. Doctors (Public Directory)
-
-#### List All Doctors
+### 3. List Doctors (Public)
 
 `GET /api/doctors`
-
-> Returns a safe public profile (excludes sensitive user data).
 
 **Response:**
 
 ```json
 [
   {
-    "id": "uuid",
+    "id": "doc-uuid-1",
     "name": "Dr. Stephen Strange",
     "specialty": "Neurosurgery",
     "status": "active",
-    "rating": 5.0,
-    "experience": 12
+    "rating": 4.9,
+    "experience": 15,
+    "education": "MD, PhD from Columbia University",
+    "bio": "Expert in neurological disorders."
   }
 ]
 
@@ -124,15 +161,27 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 
 ---
 
-## 🔒 Protected Endpoints (All Users)
+## 🔒 User Profile & Management
 
-### 1. User Profile
-
-#### Get My Profile
+### Get My Profile
 
 `GET /api/users/me`
 
-#### Update My Profile
+**Response:**
+
+```json
+{
+  "id": "user-uuid",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "role": "patient",
+  "phone": "0812345678",
+  "city": "Jakarta"
+}
+
+```
+
+### Update Profile
 
 `PUT /api/users/me`
 
@@ -140,16 +189,16 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 
 ```json
 {
-  "phone": "+62812345678",
-  "address": "Jl. Sudirman No. 1",
+  "phone": "089999999",
+  "address": "Jl. Sudirman",
   "city": "Jakarta",
   "emergencyContact": "Jane Doe",
-  "emergencyPhone": "+62899999"
+  "emergencyPhone": "081111111"
 }
 
 ```
 
-#### Change Password
+### Change Password
 
 `POST /api/auth/change-password`
 
@@ -163,17 +212,36 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 
 ```
 
-### 2. Appointments
+**Response:** `200 OK`
 
-#### List Appointments
+---
+
+## 📅 Appointments
+
+### List Appointments
 
 `GET /api/appointments`
 
-* **Patient:** Sees own appointments.
-* **Doctor:** Sees appointments assigned to them.
-* **Admin:** Sees all appointments.
+> Filters: `?status=pending`
 
-#### Book Appointment
+**Response:**
+
+```json
+[
+  {
+    "id": "appt-uuid",
+    "date": "2026-02-10",
+    "time": "09:00",
+    "status": "pending",
+    "reason": "Headache",
+    "doctor": { "name": "Dr. Strange", "specialty": "Neurosurgery" },
+    "patient": { "name": "John Doe" }
+  }
+]
+
+```
+
+### Book Appointment
 
 `POST /api/appointments`
 
@@ -181,28 +249,124 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 
 ```json
 {
-  "doctorId": "uuid-of-doctor",
-  "date": "2026-02-01",
+  "doctorId": "doc-uuid",
+  "date": "2026-02-10",
   "time": "09:00",
-  "reason": "General Checkup",
-  "complaints": "Dizzy when standing"
+  "reason": "Routine Checkup",
+  "complaints": "Mild fever"
 }
 
 ```
 
-#### View Appointment Detail
+**Response:**
 
-`GET /api/appointments/:id`
+```json
+{
+  "id": "appt-uuid",
+  "status": "pending",
+  "date": "2026-02-10",
+  "time": "09:00"
+}
 
-### 3. Messaging
+```
 
-#### List Messages
+### Cancel Appointment
+
+`DELETE /api/appointments/:id`
+**Response:** `204 No Content`
+
+### Appointments Today (Doctor/Admin)
+
+`GET /api/appointments/today`
+
+**Response:** (Same list as above, filtered for today)
+
+---
+
+## 📋 Medical Records
+
+### List Records
+
+`GET /api/medical-records`
+
+> Patients see their own. Doctors see all/filtered.
+
+**Response:**
+
+```json
+[
+  {
+    "id": "rec-uuid",
+    "diagnosis": "Seasonal Flu",
+    "symptoms": "Fever, Cough",
+    "treatment": "Rest, Hydration",
+    "prescription": "Paracetamol 500mg",
+    "createdAt": "2026-02-08T14:00:00Z",
+    "doctor": { "name": "Dr. Strange" },
+    "appointment": { "date": "2026-02-08" }
+  }
+]
+
+```
+
+### Get Patient History (Doctor)
+
+`GET /api/medical-records/patient/:id`
+
+**Response:** Returns list of records for that specific patient.
+
+### Create Record (Doctor)
+
+`POST /api/medical-records`
+
+> Note: This automatically marks the appointment as "completed".
+
+**Request:**
+
+```json
+{
+  "appointmentId": "appt-uuid",
+  "diagnosis": "Hypertension",
+  "symptoms": "Dizziness",
+  "treatment": "Lifestyle changes",
+  "prescription": "Amlodipine 5mg",
+  "notes": "Follow up in 2 weeks",
+  "vitalSigns": {
+    "bloodPressure": "140/90",
+    "weight": "80",
+    "temperature": "36.5"
+  }
+}
+
+```
+
+**Response:** Returns the created `MedicalRecord` object.
+
+---
+
+## 💬 Messaging
+
+### List Messages
 
 `GET /api/messages`
 
-> Returns inbox and sent messages combined.
+**Response:**
 
-#### Send Message
+```json
+[
+  {
+    "id": "msg-uuid",
+    "senderName": "Dr. Strange",
+    "receiverId": "my-uuid",
+    "content": "Please remember to fast before the blood test.",
+    "isRead": false,
+    "createdAt": "2026-02-08T10:30:00Z"
+  }
+]
+
+```
+
+### Send Message
 
 `POST /api/messages`
 
@@ -210,19 +374,22 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 
 ```json
 {
-  "receiverId": "uuid-of-receiver",
-  "content": "Hello, I have a question about my prescription."
+  "receiverId": "target-user-uuid",
+  "content": "Thank you, Doctor. I will."
 }
 
 ```
 
-#### Mark as Read
+### Mark Read
 
 `PUT /api/messages/:id/read`
+**Response:** `200 OK`
 
-### 4. Health Tracker
+---
 
-#### Log Health Update
+## 📈 Health Tracker
+
+### Log Vitals
 
 `POST /api/health-updates`
 
@@ -230,158 +397,79 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 
 ```json
 {
-  "date": "2026-02-01",
+  "date": "2026-02-08",
   "weight": 70.5,
   "bloodPressure": "120/80",
   "heartRate": 72,
   "mood": "Happy",
-  "notes": "Feeling better today"
+  "notes": "Morning jog completed"
 }
 
 ```
 
-#### List Health Updates
+### List Vitals
 
 `GET /api/health-updates`
-
-### 5. Schedules
-
-#### List Doctor Schedules
-
-`GET /api/schedules`
-
-> Returns all doctor schedules. Filter by doctor using query param.
-
-**Query Parameters:**
-- `doctorId` (optional): Filter schedules by doctor UUID
 
 **Response:**
 
 ```json
 [
   {
-    "id": "uuid",
-    "doctor": { "id": "doctor-uuid" },
-    "dayOfWeek": "Monday",
-    "startTime": "09:00",
-    "endTime": "17:00",
-    "isAvailable": true,
-    "createdAt": "2026-02-05T14:36:13Z"
+    "id": "health-uuid",
+    "date": "2026-02-08",
+    "bloodPressure": "120/80",
+    "mood": "Happy"
   }
 ]
+
 ```
 
 ---
 
-## 🩺 Doctor & Admin Only
+## 📂 File System
 
-### 1. Medical Records
+### Upload File
 
-#### Create Medical Record
+`POST /api/upload`
 
-`POST /api/medical-records`
+> Content-Type: `multipart/form-data`
 
-> Automatically marks the appointment as "completed".
+**Request:** Form field `file` containing the image/pdf.
 
-**Request:**
-
-```json
-{
-  "appointmentId": "uuid-of-appointment",
-  "diagnosis": "Flu",
-  "symptoms": "Fever, Cough",
-  "treatment": "Rest",
-  "prescription": "Paracetamol",
-  "notes": "Drink water",
-  "followUpRequired": true,
-  "followUpDate": "2026-02-10",
-  "vitalSigns": {
-    "bloodPressure": "120/80",
-    "weight": "70"
-  }
-}
-
-```
-
-### 2. Clinical Notes (Internal)
-
-#### Create Clinical Note
-
-`POST /api/clinical-notes`
-
-**Request:**
+**Response:**
 
 ```json
 {
-  "patientId": "uuid-of-patient",
-  "appointmentId": "uuid-of-appointment",
-  "diagnosis": "Suspected Typhoid",
-  "treatment": "Further lab tests required",
-  "notes": "Patient looks pale",
-  "status": "draft"
+  "filename": "A1B2C3D4.jpg",
+  "url": "/uploads/A1B2C3D4.jpg"
 }
 
 ```
-
-### 3. Patient Management
-
-#### List All Patients
-
-`GET /api/users/patients`
-
-#### Get Patient Detail
-
-`GET /api/users/patients/:id`
 
 ---
 
-## 👮 Admin Only
+## 🩺 Doctor Self-Service
 
-### 1. User Management
+### Get My Profile
 
-* `POST /api/users` - Create any user (Admin, Doctor, Patient).
-* `GET /api/users` - List all system users.
-* `DELETE /api/users/:id` - Delete a user.
+`GET /api/doctors/me`
 
-### 2. Doctor Management
-
-* `POST /api/doctors` - Create a Doctor (Profile + User Account).
-* `PUT /api/doctors/:id` - Update Doctor.
-* `DELETE /api/doctors/:id` - Delete Doctor.
-
-**Create Doctor Request:**
+**Response:**
 
 ```json
 {
+  "id": "doc-uuid",
   "name": "Dr. Strange",
-  "email": "strange@hospital.com",
-  "password": "optionalPassword",
-  "phone": "08123456789",
-  "specialty": "Magic",
+  "specialty": "Neurosurgery",
   "status": "active",
-  "experience": 10,
-  "totalPatients": 0,
+  "totalPatients": 120,
   "rating": 5.0
 }
 
 ```
 
-### 3. Appointment Actions
-
-* `PUT /api/appointments/:id/approve`
-* `PUT /api/appointments/:id/reject`
-
-### 4. Analytics
-
-* `GET /api/analytics/dashboard`
-
----
-
-## 🗓 Doctor Only
-
-### Schedule Management
-
-#### Create Schedule
+### Update Availability (Schedule)
 
 `POST /api/schedules`
 
@@ -390,46 +478,93 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 ```json
 {
   "dayOfWeek": "Monday",
-  "startTime": "09:00",
-  "endTime": "17:00",
+  "startTime": "08:00",
+  "endTime": "16:00",
   "isAvailable": true
 }
+
 ```
 
 **Response:**
 
 ```json
 {
-  "id": "uuid",
-  "doctor": { "id": "doctor-uuid" },
+  "id": "sched-uuid",
   "dayOfWeek": "Monday",
-  "startTime": "09:00",
-  "endTime": "17:00",
-  "isAvailable": true,
-  "createdAt": "2026-02-05T14:36:13Z"
+  "startTime": "08:00",
+  "endTime": "16:00"
 }
+
 ```
 
-#### Update Schedule
+---
 
-`PUT /api/schedules/:id`
+## 👮 Admin Dashboard & Analytics
 
-**Request:**
+### System Dashboard
+
+`GET /api/analytics/dashboard`
+
+**Response:**
 
 ```json
 {
-  "dayOfWeek": "Tuesday",
-  "startTime": "10:00",
-  "endTime": "18:00",
-  "isAvailable": false
+  "totalPatients": 150,
+  "totalDoctors": 12,
+  "totalAppointments": 340,
+  "revenue": 0
 }
+
 ```
 
-#### Delete Schedule
+### Doctor Performance
 
-`DELETE /api/schedules/:id`
+`GET /api/analytics/doctors`
 
-> Returns `204 No Content` on success.
+**Response:**
+
+```json
+[
+  {
+    "name": "Dr. Strange",
+    "appointmentCount": 45,
+    "rating": 5.0
+  }
+]
+
+```
+
+### Health Trends
+
+`GET /api/analytics/health`
+
+**Response:**
+
+```json
+[
+  { "diagnosis": "Flu", "count": 25 },
+  { "diagnosis": "Gastritis", "count": 10 }
+]
+
+```
+
+### System Alerts
+
+`GET /api/system-alerts`
+
+**Response:**
+
+```json
+[
+  {
+    "id": "alert-uuid",
+    "type": "critical",
+    "title": "High CPU Usage",
+    "status": "active"
+  }
+]
+
+```
 
 ---
 
@@ -441,5 +576,7 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 * **ORM:** Fluent
 * **Auth:** JWT (JSON Web Tokens)
 * **Container:** Docker
+
+```
 
 ```

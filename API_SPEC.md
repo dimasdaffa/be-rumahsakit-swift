@@ -1,12 +1,8 @@
-Here is your fully updated **API Specification & Progress Report**.
-
-I have marked **File Uploads**, **Message Deletion**, **Patient Details**, and **System Alerts** as **✅ Done**. You are now **90% complete** with the entire specification!
-
 ---
 
 # 📚 Complete API Specification - RS Permata Sehat
 
-> **Hospital Management System - Digital Control Schedule** > Last Updated: **February 8, 2026** (Final Polish Phase)
+> **Hospital Management System - Digital Control Schedule** > Last Updated: **February 8, 2026** (Final Release Candidate)
 
 ---
 
@@ -15,9 +11,9 @@ I have marked **File Uploads**, **Message Deletion**, **Patient Details**, and *
 | Metric | Count | Status |
 | --- | --- | --- |
 | **Total Endpoints** | **65** | 🎯 Target |
-| **Implemented** | **59** | ✅ Functional |
-| **Pending** | **6** | ⚠️ Low Priority / Optional |
-| **Completion Rate** | **90%** | 🚀 **Production Ready** |
+| **Implemented** | **62** | ✅ Functional |
+| **Pending** | **3** | ⚠️ External Dependency (Email) |
+| **Completion Rate** | **95%** | 🚀 **Production Ready** |
 
 ---
 
@@ -31,7 +27,7 @@ I have marked **File Uploads**, **Message Deletion**, **Patient Details**, and *
 | `POST /api/auth/login` | ✅ **Done** | Public |
 | `POST /api/auth/change-password` | ✅ **Done** | Auth User |
 | `POST /api/auth/logout` | ✅ **Done** | Auth User |
-| `POST /api/auth/forgot-password` | ⏳ Pending | Public |
+| `POST /api/auth/forgot-password` | ⏳ Pending | Public (Needs Email Server) |
 
 ### 2. User Management
 
@@ -50,6 +46,7 @@ I have marked **File Uploads**, **Message Deletion**, **Patient Details**, and *
 | Endpoint | Status | Access |
 | --- | --- | --- |
 | `GET /api/appointments` | ✅ **Done** | All (Scoped) |
+| `GET /api/appointments/today` | ✅ **Done** | Doctor/Admin |
 | `POST /api/appointments` | ✅ **Done** | All |
 | `GET /api/appointments/:id` | ✅ **Done** | Owner/Admin |
 | `DELETE /api/appointments/:id` | ✅ **Done** | Owner/Admin (Cancel) |
@@ -73,6 +70,7 @@ I have marked **File Uploads**, **Message Deletion**, **Patient Details**, and *
 | Endpoint | Status | Access |
 | --- | --- | --- |
 | `GET /api/medical-records` | ✅ **Done** | Doctor/Patient (Scoped) |
+| `GET /api/medical-records/patient/:id` | ✅ **Done** | Doctor/Admin |
 | `POST /api/medical-records` | ✅ **Done** | Doctor |
 | `GET /api/medical-records/:id` | ✅ **Done** | Owner/Doctor |
 | `PUT /api/medical-records/:id` | ✅ **Done** | Doctor (Owner)/Admin |
@@ -121,6 +119,7 @@ I have marked **File Uploads**, **Message Deletion**, **Patient Details**, and *
 | `GET /api/analytics/dashboard` | ✅ **Done** | Admin |
 | `GET /api/analytics/appointments` | ✅ **Done** | Admin |
 | `GET /api/analytics/doctors` | ✅ **Done** | Admin |
+| `GET /api/analytics/health` | ✅ **Done** | Admin |
 
 ### 11. System & Files
 
@@ -148,9 +147,6 @@ I have marked **File Uploads**, **Message Deletion**, **Patient Details**, and *
 
 ### 🟢 Low Priority (Optional)
 
-* [ ] `POST /api/auth/forgot-password` (Requires Email Service)
-* [ ] `GET /api/analytics/health` (Diagnosis trends)
-* [ ] `GET /api/appointments/today` (Can use filtered list)
-* [ ] `GET /api/medical-records/patient/:id` (Can use standard list with filter)
+* [ ] `POST /api/auth/forgot-password` (Pending: Requires SMTP/Email Service integration)
 
 ---
