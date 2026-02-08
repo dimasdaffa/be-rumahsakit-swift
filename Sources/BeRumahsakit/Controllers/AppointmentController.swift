@@ -15,6 +15,9 @@ struct AppointmentController: RouteCollection {
             )
             
         appointments.get(":id", use: show)
+
+        appointments.delete(":id", use: delete)
+        .openAPI(summary: "Cancel/Delete an appointment")
     }
 
     // 1. LIST APPOINTMENTS 📋
@@ -129,5 +132,49 @@ struct AppointmentController: RouteCollection {
         }
         
         return appointment
+    }
+
+    // DELETE /api/appointments/:id
+    @Sendable
+    func delete(req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        
+        guard let appointment = try await Appointment.find(req.parameters.get("id"), on: req.db) else {
+            throw Abort(.notFound)
+        }
+        
+        // 1. ADMIN: Can delete anything
+        if user.role == .admin {
+            try await appointment.delete(on: req.db)
+            return .noContent
+        }
+        
+        // 2. PATIENT: Can only delete THEIR OWN appointment
+        if user.role == .patient {
+            guard appointment.$patient.id == user.id else {
+                throw Abort(.forbidden, reason: "You can only cancel your own appointments")
+            }
+            // Optional: Prevent cancelling if status is already 'completed'
+            if appointment.status == "completed" {
+                throw Abort(.badRequest, reason: "Cannot cancel a completed appointment")
+            }
+        }
+        
+        // 3. DOCTOR: Can only delete appointments ASSIGNED TO THEM
+        if user.role == .doctor {
+            // We need to find the Doctor profile linked to this User
+            guard let doctorProfile = try await Doctor.query(on: req.db)
+                .filter(\.$user.$id == user.id!)
+                .first() else {
+                throw Abort(.forbidden, reason: "Doctor profile not found")
+            }
+            
+            guard appointment.$doctor.id == doctorProfile.id else {
+                throw Abort(.forbidden, reason: "You can only cancel appointments assigned to you")
+            }
+        }
+        
+        try await appointment.delete(on: req.db)
+        return .noContent
     }
 }
