@@ -7,25 +7,33 @@ struct AuthController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let auth = routes.grouped("api", "auth")
 
-        // POST /api/auth/register
+        // PUBLIC
         auth.post("register", use: register)
             .openAPI(
-                summary: "Register new user",
+                summary: "Register new patient",
                 body: .type(RegisterRequest.self)
             )
 
-        // POST /api/auth/login
         auth.post("login", use: login)
             .openAPI(
-                summary: "Login and get Token",
+                summary: "Login user",
                 body: .type(LoginRequest.self)
             )
 
-        auth.post("change-password", use: changePassword)
+        // PROTECTED (Requires Token)
+        // We use a separate group here because register/login are public
+        let protected = auth.grouped(UserAuthenticator())
+            .grouped(User.guardMiddleware())
+
+        protected.post("change-password", use: changePassword)
             .openAPI(
-                summary: "Change Password",
+                summary: "Change password",
                 body: .type(ChangePasswordRequest.self)
             )
+
+        // LOGOUT (New) ✅
+        protected.post("logout", use: logout)
+            .openAPI(summary: "Logout (Client should discard token)")
     }
 
     // 📝 REGISTER
@@ -37,9 +45,10 @@ struct AuthController: RouteCollection {
         // Only allow "patient" registration via public API.
         // Admins/Doctors must be created via the Admin Panel (DoctorController).
         let role = UserRole(rawValue: input.role) ?? .patient
-        
+
         if role == .doctor || role == .admin {
-            throw Abort(.forbidden, reason: "Doctors and Admins must be created by an Administrator.")
+            throw Abort(
+                .forbidden, reason: "Doctors and Admins must be created by an Administrator.")
         }
 
         // 2. Check if email exists
@@ -116,5 +125,16 @@ struct AuthController: RouteCollection {
         try await dbUser.save(on: req.db)
 
         return SuccessResponse(success: true, message: "Password updated successfully")
+    }
+
+    // POST /api/auth/logout
+    @Sendable
+    func logout(req: Request) async throws -> HTTPStatus {
+        // We require a valid token to "logout"
+        let _ = try req.auth.require(User.self)
+
+        // Since we use stateless JWTs, we just return 200 OK.
+        // The Client App MUST delete the token from its storage (Keychain/UserDefaults).
+        return .ok
     }
 }

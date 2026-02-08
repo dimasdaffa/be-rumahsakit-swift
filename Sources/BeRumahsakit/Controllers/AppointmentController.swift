@@ -21,9 +21,14 @@ struct AppointmentController: RouteCollection {
         appointments.get(":id", use: show)
             .openAPI(summary: "Get Appointment Details")
 
-        // DELETE (Cancel) - NEW ✅
+        // DELETE (Cancel) 
         appointments.delete(":id", use: delete)
             .openAPI(summary: "Cancel/Delete an appointment")
+
+        // COMPLETE (Doctor Only) 
+        let doctorGroup = appointments.grouped(CheckRole(requiredRole: .doctor))
+        doctorGroup.put(":id", "complete", use: complete)
+            .openAPI(summary: "Mark appointment as completed (Doctor only)")
     }
 
     // 1. LIST APPOINTMENTS 📋
@@ -195,5 +200,33 @@ struct AppointmentController: RouteCollection {
 
         try await appointment.delete(on: req.db)
         return .noContent
+    }
+
+    // PUT /api/appointments/:id/complete
+    @Sendable
+    func complete(req: Request) async throws -> Appointment {
+        let user = try req.auth.require(User.self)
+        
+        guard let appointment = try await Appointment.find(req.parameters.get("id"), on: req.db) else {
+            throw Abort(.notFound)
+        }
+        
+        // Verify this appointment belongs to the logged-in Doctor
+        // 1. Get Doctor Profile
+        guard let doctorProfile = try await Doctor.query(on: req.db)
+            .filter(\.$user.$id == user.id!)
+            .first() else {
+            throw Abort(.forbidden, reason: "Doctor profile not found")
+        }
+        
+        // 2. Check assignment
+        guard appointment.$doctor.id == doctorProfile.id else {
+            throw Abort(.forbidden, reason: "You can only complete your own appointments")
+        }
+        
+        appointment.status = "completed"
+        try await appointment.save(on: req.db)
+        
+        return appointment
     }
 }
