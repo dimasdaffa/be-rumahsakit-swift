@@ -30,3 +30,14 @@ struct DoctorPublicResponse: Content {
     var education: String?
     var license: String?
 }
+
+// 3. DOCTOR SELF-UPDATE DTO
+// Allows doctors to update their own profile details
+struct UpdateDoctorMyProfileRequest: Content {
+    var phone: String?
+    var specialty: String?
+    var status: String? // "active", "busy", "offline"
+    var education: String?
+    var bio: String?
+    var experience: Int?
+}

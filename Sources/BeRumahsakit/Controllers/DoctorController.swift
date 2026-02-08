@@ -6,20 +6,43 @@ struct DoctorController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let doctors = routes.grouped("api", "doctors")
         
-        // ✅ PUBLIC ROUTES
+        // ==========================
+        // 1. PUBLIC ROUTES
+        // ==========================
         doctors.get(use: index)
             .openAPI(summary: "List all doctors (Public Safe Data)")
+            
+        // ==========================
+        // 2. DOCTOR SELF-SERVICE (New!) ✅
+        // ==========================
+        // NOTE: These routes MUST be registered BEFORE /:id routes
+        // to prevent "me" from being matched as an ID parameter
+        let doctorGroup = doctors.grouped(CheckRole(requiredRole: .doctor))
         
+        doctorGroup.get("me", use: getMe)
+            .openAPI(summary: "Get my doctor profile")
+            
+        doctorGroup.put("me", use: updateMe)
+            .openAPI(
+                summary: "Update my doctor profile",
+                body: .type(UpdateDoctorMyProfileRequest.self)
+            )
+        
+        // ==========================
+        // 3. PUBLIC ROUTE WITH ID PARAM
+        // ==========================
         doctors.get(":id", use: show)
             .openAPI(summary: "Get doctor details")
         
-        // 🔒 ADMIN ONLY ROUTES
+        // ==========================
+        // 4. ADMIN ONLY ROUTES
+        // ==========================
         let admin = doctors.grouped(CheckRole(requiredRole: .admin))
         
         admin.post(use: create)
             .openAPI(
                 summary: "Create a new doctor (Admin only)",
-                body: .type(CreateDoctorInput.self) // Defines input schema
+                body: .type(CreateDoctorInput.self)
             )
         
         admin.group(":id") { doctor in
@@ -155,5 +178,69 @@ struct DoctorController: RouteCollection {
         }
         try await doctor.delete(on: req.db)
         return .noContent
+    }
+
+    // MARK: - New Handlers
+    
+    // GET /api/doctors/me
+    @Sendable
+    func getMe(req: Request) async throws -> DoctorPublicResponse {
+        let user = try req.auth.require(User.self)
+        
+        // Find the Doctor profile linked to this User
+        guard let doc = try await Doctor.query(on: req.db)
+            .filter(\.$user.$id == user.id!)
+            .first() else {
+            throw Abort(.notFound, reason: "Doctor profile not found for this user")
+        }
+        
+        // Return Safe DTO
+        return DoctorPublicResponse(
+            id: doc.id!,
+            name: doc.name,
+            specialty: doc.specialty,
+            status: doc.status,
+            experience: doc.experience,
+            rating: doc.rating,
+            bio: doc.bio,
+            education: doc.education,
+            license: doc.license
+        )
+    }
+    
+    // PUT /api/doctors/me
+    @Sendable
+    func updateMe(req: Request) async throws -> DoctorPublicResponse {
+        let user = try req.auth.require(User.self)
+        let input = try req.content.decode(UpdateDoctorMyProfileRequest.self)
+        
+        // Find Profile
+        guard let doc = try await Doctor.query(on: req.db)
+            .filter(\.$user.$id == user.id!)
+            .first() else {
+            throw Abort(.notFound, reason: "Doctor profile not found")
+        }
+        
+        // Update Fields
+        if let p = input.phone { doc.phone = p }
+        if let s = input.specialty { doc.specialty = s }
+        if let st = input.status { doc.status = st }
+        if let e = input.education { doc.education = e }
+        if let b = input.bio { doc.bio = b }
+        if let ex = input.experience { doc.experience = ex }
+        
+        try await doc.save(on: req.db)
+        
+        return DoctorPublicResponse(
+            id: doc.id!,
+            name: doc.name,
+            specialty: doc.specialty,
+            status: doc.status,
+            experience: doc.experience,
+            rating: doc.rating,
+            bio: doc.bio,
+            education: doc.education,
+            license: doc.license
+        )
     }
 }
