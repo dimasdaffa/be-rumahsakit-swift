@@ -10,3 +10,7 @@ db.sqlite
 .env.*
 !.env.example
 default.profraw
+
+# Uploaded files
+Public/uploads/*
+!Public/uploads/.gitkeep

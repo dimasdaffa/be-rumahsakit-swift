@@ -57,9 +57,8 @@ func routes(_ app: Application) throws {
     try protected.register(collection: DoctorController())
     try protected.register(collection: HealthUpdateController())
     try protected.register(collection: MessageController())
-    
-    // ✅ MOVED HERE: ScheduleController needs to be accessible by Patients (to view) and Doctors (to edit).
     try protected.register(collection: ScheduleController())
+    try protected.register(collection: FileController())
 
     // ==========================================
     // 3. ADMIN ONLY ROUTES (Must be Admin) 👮‍♂️

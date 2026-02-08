@@ -16,7 +16,10 @@ public func configure(_ app: Application) async throws {
     let jwtSecret = Environment.get("JWT_SECRET") ?? "default-secret-change-in-production"
     app.jwt.signers.use(.hs256(key: jwtSecret))
 
-    // 3. DATABASE
+    // 3. INCREASE MAX BODY SIZE (for file uploads)
+    app.routes.defaultMaxBodySize = "5mb"
+
+    // 4. DATABASE
     let hostname = Environment.get("DATABASE_HOST") ?? "127.0.0.1"
     let port = Environment.get("DATABASE_PORT").flatMap(Int.init) ?? 3306
     let username = Environment.get("DATABASE_USERNAME") ?? "root"
@@ -31,7 +34,7 @@ public func configure(_ app: Application) async throws {
         database: database
     ), as: .mysql)
 
-    // 4. REGISTER MIGRATIONS 
+    // 5. REGISTER MIGRATIONS 
     app.migrations.add(CreateUser())          // 1. Create Users first
     app.migrations.add(CreateDoctor())        // 2. Doctors link to Users
     app.migrations.add(CreateSchedule())      // 3. Schedules link to Doctors
@@ -41,6 +44,11 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateClinicalNote())
     app.migrations.add(CreateHealthUpdate())
     app.migrations.add(CreateMessage())
+
+    // 6. FILE MIDDLEWARE (Serve files from /Public folder)
+    // Ensure you create a folder named "Public" in your project root!
+    let fileMiddleware = FileMiddleware(publicDirectory: app.directory.publicDirectory)
+    app.middleware.use(fileMiddleware)
 
     try routes(app)
 }

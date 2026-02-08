@@ -2,6 +2,12 @@ import Vapor
 import Fluent
 import VaporToOpenAPI
 
+struct PatientDetailResponse: Content {
+    var user: User.Public
+    var medicalHistory: [MedicalRecord]
+    var vitals: [HealthUpdate]
+}
+
 struct UserController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let users = routes.grouped("api", "users")
@@ -33,9 +39,10 @@ struct UserController: RouteCollection {
         users.get("patients", use: listPatients)
             .openAPI(summary: "List all patients (Doctor/Admin only)")
 
-        // GET /api/users/patients/:id (Get specific patient details)
-        users.get("patients", ":id", use: getPatientDetail)
-            .openAPI(summary: "Get patient details (Doctor/Admin only)")
+        // GET /api/users/patients/:id (Get full patient detail)
+        let patients = users.grouped("patients")
+        patients.get(":id", use: getPatientDetail)
+            .openAPI(summary: "Get full patient detail (Doctor/Admin)")
             
         // ==========================
         // 4. ADMIN ONLY ROUTES
@@ -66,9 +73,7 @@ struct UserController: RouteCollection {
         // DELETE /api/users/:id
         adminRoutes.delete(":id", use: deleteUser)
     }
-
-    // MARK: - Handlers
-
+    
     // 👤 ME
     @Sendable
     func getMe(req: Request) async throws -> UserResponse {
@@ -120,15 +125,38 @@ struct UserController: RouteCollection {
     }
 
     @Sendable
-    func getPatientDetail(req: Request) async throws -> UserResponse {
+    func getPatientDetail(req: Request) async throws -> PatientDetailResponse {
         let user = try req.auth.require(User.self)
-        guard user.role == .doctor || user.role == .admin else { throw Abort(.forbidden) }
         
+        // Access Control: Only Doctor or Admin
+        guard user.role == .doctor || user.role == .admin else {
+            throw Abort(.forbidden)
+        }
+        
+        // Find the patient
         guard let patient = try await User.find(req.parameters.get("id"), on: req.db),
               patient.role == .patient else {
             throw Abort(.notFound, reason: "Patient not found")
         }
-        return UserResponse(user: patient)
+        
+        // Fetch Medical Records
+        let records = try await MedicalRecord.query(on: req.db)
+            .filter(\.$patient.$id == patient.id!)
+            .sort(\.$createdAt, .descending)
+            .all()
+            
+        // Fetch Recent Health Updates (Vitals)
+        let healthUpdates = try await HealthUpdate.query(on: req.db)
+            .filter(\.$patient.$id == patient.id!)
+            .sort(\.$date, .descending)
+            .limit(5) // Just the last 5
+            .all()
+            
+        return PatientDetailResponse(
+            user: patient.toPublic(),
+            medicalHistory: records,
+            vitals: healthUpdates
+        )
     }
 
     // 👮‍♂️ ADMIN OPERATIONS
