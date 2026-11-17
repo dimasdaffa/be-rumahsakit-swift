@@ -7,6 +7,7 @@ func routes(_ app: Application) throws {
     // 1. PUBLIC ROUTES (Open to everyone) 🌍
     // ==========================================
     try app.register(collection: AuthController())
+    try app.register(collection: HealthController())
     
     // Swagger Documentation (Keep as is)
     app.get("swagger.json") { req in

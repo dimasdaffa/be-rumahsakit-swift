@@ -12,3 +12,9 @@ struct CreateHealthUpdateRequest: Content {
     var notes: String?
     var patientId: UUID? 
 }
+
+struct HealthCheckResponse: Content {
+    let status: String
+    let node: String
+    let timestamp: String
+}
