@@ -6,7 +6,7 @@ struct ScheduleController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let schedules = routes.grouped("api", "schedules")
         
-        // PUBLIC: List all schedules (Patients can see availability)
+        // Authenticated users can read weekly practice hours.
         schedules.get(use: index)
             .openAPI(summary: "List doctor schedules")
 
@@ -39,68 +39,61 @@ struct ScheduleController: RouteCollection {
         return try await query.all()
     }
 
-    // POST /api/schedules
     @Sendable
     func create(req: Request) async throws -> Schedule {
         let user = try req.auth.require(User.self)
         let input = try req.content.decode(CreateScheduleRequest.self)
-        
-        // Find Doctor Profile
-        guard let doctor = try await Doctor.query(on: req.db).filter(\.$user.$id == user.id!).first() else {
-            throw Abort(.forbidden, reason: "Doctor profile not found")
+        let doctorId = try await PatientAccess.doctorId(for: user, on: req.db)
+        try validate(day: input.dayOfWeek, start: input.startTime, end: input.endTime)
+        return try await req.db.transaction { database in
+            try await BookingSlots.lockDoctor(doctorId, on: database)
+            let schedule = Schedule(doctorId: doctorId, dayOfWeek: input.dayOfWeek, startTime: input.startTime,
+                                    endTime: input.endTime, isAvailable: input.isAvailable)
+            try await schedule.create(on: database)
+            return schedule
         }
-        
-        let schedule = Schedule(
-            doctorId: doctor.id!,
-            dayOfWeek: input.dayOfWeek,
-            startTime: input.startTime,
-            endTime: input.endTime,
-            isAvailable: input.isAvailable
-        )
-        
-        try await schedule.save(on: req.db)
-        return schedule
     }
 
-    // PUT /api/schedules/:id
     @Sendable
     func update(req: Request) async throws -> Schedule {
-        let user = try req.auth.require(User.self)
-        guard let schedule = try await Schedule.find(req.parameters.get("id"), on: req.db) else {
-            throw Abort(.notFound)
-        }
-        
-        // Verify Ownership
-        guard let doctor = try await Doctor.query(on: req.db).filter(\.$user.$id == user.id!).first(),
-              doctor.id == schedule.$doctor.id else {
-            throw Abort(.forbidden)
-        }
-        
         let input = try req.content.decode(UpdateScheduleRequest.self)
-        if let d = input.dayOfWeek { schedule.dayOfWeek = d }
-        if let s = input.startTime { schedule.startTime = s }
-        if let e = input.endTime { schedule.endTime = e }
-        if let a = input.isAvailable { schedule.isAvailable = a }
-        
-        try await schedule.save(on: req.db)
-        return schedule
+        return try await mutate(req) { schedule, database in
+            if let day = input.dayOfWeek { schedule.dayOfWeek = day }
+            if let start = input.startTime { schedule.startTime = start }
+            if let end = input.endTime { schedule.endTime = end }
+            if let available = input.isAvailable { schedule.isAvailable = available }
+            try validate(day: schedule.dayOfWeek, start: schedule.startTime, end: schedule.endTime)
+            try await schedule.update(on: database)
+            return schedule
+        }
     }
 
-    // DELETE /api/schedules/:id
     @Sendable
     func delete(req: Request) async throws -> HTTPStatus {
+        try await mutate(req) { schedule, database in
+            try await schedule.delete(on: database)
+            return .noContent
+        }
+    }
+
+    private func mutate<T: Sendable>(
+        _ req: Request, _ change: @escaping @Sendable (Schedule, any Database) async throws -> T
+    ) async throws -> T {
         let user = try req.auth.require(User.self)
-        guard let schedule = try await Schedule.find(req.parameters.get("id"), on: req.db) else {
-            throw Abort(.notFound)
+        let doctorId = try await PatientAccess.doctorId(for: user, on: req.db)
+        let id = try req.parameters.require("id", as: UUID.self)
+        return try await req.db.transaction { database in
+            try await BookingSlots.lockDoctor(doctorId, on: database)
+            guard let schedule = try await Schedule.find(id, on: database) else { throw Abort(.notFound) }
+            guard schedule.$doctor.id == doctorId else { throw Abort(.forbidden) }
+            return try await change(schedule, database)
         }
-        
-        // Verify Ownership
-        guard let doctor = try await Doctor.query(on: req.db).filter(\.$user.$id == user.id!).first(),
-              doctor.id == schedule.$doctor.id else {
-            throw Abort(.forbidden)
+    }
+
+    private func validate(day: String, start: String, end: String) throws {
+        guard BookingSlots.weekdays.contains(day.lowercased()), let start = ClinicTime.minute(start),
+              let end = ClinicTime.minute(end), end - start >= BookingSlots.duration else {
+            throw Abort(.badRequest, reason: "Specify a weekday and at least 30 minutes of practice hours")
         }
-        
-        try await schedule.delete(on: req.db)
-        return .noContent
     }
 }

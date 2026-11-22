@@ -28,7 +28,19 @@ final class Appointment: Model, Content {
     var complaints: String?
 
     @Field(key: "status")
-    var status: String // "pending", "approved", "rejected", "completed"
+    var status: String
+
+    @OptionalField(key: "cancellation_reason")
+    var cancellationReason: String?
+
+    @OptionalField(key: "cancellation_note")
+    var cancellationNote: String?
+
+    @OptionalField(key: "pre_cancellation_status")
+    var preCancellationStatus: String?
+
+    @OptionalField(key: "booking_key")
+    var bookingKey: String?
 
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?

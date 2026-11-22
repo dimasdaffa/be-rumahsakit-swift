@@ -40,11 +40,21 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateSchedule())      // 3. Schedules link to Doctors
     app.migrations.add(CreateAppointment())   // 4. Appointments link to both
     app.migrations.add(CreateMedicalRecord()) // 5. Records link to Appointment
-    app.migrations.add(SeedAdminUser())
     app.migrations.add(CreateClinicalNote())
     app.migrations.add(CreateHealthUpdate())
     app.migrations.add(CreateMessage())
     app.migrations.add(CreateSystemAlert())
+    app.migrations.add(AddUserPatientFields())
+    app.migrations.add(AddDoctorPatientFields())
+    app.migrations.add(AddAppointmentPatientFields())
+    app.migrations.add(CreateDoctorFavorites())
+    app.migrations.add(CreatePatientNotifications())
+    app.migrations.add(AddMedicalRecordPatientFields())
+    app.migrations.add(AddHealthMeasurementTime())
+    app.migrations.add(CreatePatientDocuments())
+    app.migrations.add(CreateLabResults())
+    app.migrations.add(CreateMedicationIntakes())
+    app.migrations.add(SeedAdminUser())
 
     // 6. FILE MIDDLEWARE (Serve files from /Public folder)
     // Ensure you create a folder named "Public" in your project root!

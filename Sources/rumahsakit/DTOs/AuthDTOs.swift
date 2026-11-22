@@ -57,6 +57,10 @@ struct CreateMedicalRecordRequest: Content {
     var followUpRequired: Bool
     var followUpDate: String?
     var vitalSigns: VitalSignsDTO?
+    var recordType: String?
+    var severity: String?
+    var symptomTags: [String]?
+    var medications: [PrescribedMedication]?
 }
 
 struct UpdateMedicalRecordRequest: Content {
@@ -70,4 +74,8 @@ struct UpdateMedicalRecordRequest: Content {
     var followUpDate: String?
     
     var vitalSigns: VitalSignsDTO?
+    var recordType: String?
+    var severity: String?
+    var symptomTags: [String]?
+    var medications: [PrescribedMedication]?
 }

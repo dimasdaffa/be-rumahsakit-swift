@@ -59,6 +59,8 @@ The API will start at: `http://localhost:8080`
 
 ## 📚 API Documentation
 
+Untuk kontrak iOS yang mengikuti implementasi saat ini, lihat [Kontrak aplikasi pasien iOS](API_SPEC.md#kontrak-aplikasi-pasien-ios).
+
 ### Base URL
 
 ```
@@ -137,7 +139,7 @@ Authorization: Bearer <YOUR_JWT_TOKEN>
 
 ```
 
-### 3. List Doctors (Public)
+### 3. List Doctors (Bearer JWT)
 
 `GET /api/doctors`
 

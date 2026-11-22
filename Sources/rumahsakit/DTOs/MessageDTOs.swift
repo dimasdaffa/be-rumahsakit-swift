@@ -14,3 +14,11 @@ struct MessageResponse: Content {
     var isRead: Bool
     var createdAt: Date?
 }
+struct MessageConversation: Content {
+    let peerId: UUID
+    let name: String
+    let specialty: String?
+    let avatarURL: String?
+    let latestMessage: MessageResponse
+    let unreadCount: Int
+}

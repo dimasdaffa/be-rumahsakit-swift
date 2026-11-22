@@ -13,6 +13,7 @@ struct UpdateProfileRequest: Content {
     var postalCode: String?
     var emergencyContact: String?
     var emergencyPhone: String?
+    var avatarURL: String?
 }
 
 struct ChangePasswordRequest: Content {
@@ -43,6 +44,8 @@ struct UserResponse: Content {
     var emergencyContact: String?
     var emergencyPhone: String?
     
+    var avatarURL: String?
+    var patientNumber: String?
     var createdAt: Date?
     var updatedAt: Date?
     
@@ -51,6 +54,8 @@ struct UserResponse: Content {
         self.name = user.name
         self.email = user.email
         self.role = user.role.rawValue
+        self.avatarURL = user.avatarURL
+        self.patientNumber = user.role == .patient ? "PS-\(id.uuidString)" : nil
         self.phone = user.phone
         self.dateOfBirth = user.dateOfBirth
         self.gender = user.gender

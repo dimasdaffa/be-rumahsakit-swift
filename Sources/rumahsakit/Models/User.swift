@@ -54,6 +54,16 @@ final class User: Model, Content, @unchecked Sendable, Authenticatable {
     var emergencyPhone: String?
     // --------------------------
 
+    @OptionalField(key: "avatar_url")
+    var avatarURL: String?
+
+    @OptionalField(key: "appointment_notifications")
+    var appointmentNotifications: Bool?
+
+    func encode(to encoder: any Encoder) throws {
+        try toPublic().encode(to: encoder)
+    }
+
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
     

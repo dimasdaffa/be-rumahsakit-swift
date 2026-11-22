@@ -50,6 +50,11 @@ final class MedicalRecord: Model, Content {
     @OptionalField(key: "vital_weight")
     var vitalWeight: String?
 
+    @OptionalField(key: "record_type") var recordType: String?
+    @OptionalField(key: "severity") var severity: String?
+    @OptionalField(key: "symptom_tags") var symptomTags: [String]?
+    @OptionalField(key: "medications") var medications: [PrescribedMedication]?
+
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
 

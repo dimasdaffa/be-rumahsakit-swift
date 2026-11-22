@@ -2,6 +2,7 @@ import Vapor
 
 struct CreateHealthUpdateRequest: Content {
     var date: String
+    var measuredAt: Date?
     var weight: Double?
     var height: Double?
     var bloodPressure: String?

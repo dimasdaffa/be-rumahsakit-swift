@@ -33,6 +33,9 @@ struct DoctorController: RouteCollection {
         // ==========================
         doctors.get(":id", use: show)
             .openAPI(summary: "Get doctor details")
+        doctors.get(":id", "availability", use: availability).openAPI(summary: "Get bookable slots by date")
+        doctors.put(":id", "favorite", use: favorite).openAPI(summary: "Favorite a doctor")
+        doctors.delete(":id", "favorite", use: unfavorite).openAPI(summary: "Unfavorite a doctor")
         
         // ==========================
         // 4. ADMIN ONLY ROUTES
@@ -60,39 +63,92 @@ struct DoctorController: RouteCollection {
     // GET /api/doctors
     @Sendable
     func index(req: Request) async throws -> [DoctorPublicResponse] {
-        let doctors = try await Doctor.query(on: req.db).all()
-        return doctors.map { doc in
-            DoctorPublicResponse(
-                id: doc.id!,
-                name: doc.name,
-                specialty: doc.specialty,
-                status: doc.status,
-                experience: doc.experience,
-                rating: doc.rating,
-                bio: doc.bio,
-                education: doc.education,
-                license: doc.license
-            )
+        let user = try req.auth.require(User.self)
+        let search = req.query[String.self, at: "q"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let specialty = req.query[String.self, at: "specialty"]
+        let favorites = try await DoctorFavorite.query(on: req.db).filter(\.$userId == user.requireID()).all()
+        let favoriteIds = Set(favorites.map(\.doctorId))
+        let favoritesOnly = req.query[Bool.self, at: "favorites"] == true
+        let doctors = try await Doctor.query(on: req.db).sort(\.$name).all().filter { doctor in
+            let matchesSearch = search.map { $0.isEmpty || doctor.name.localizedCaseInsensitiveContains($0) || doctor.specialty.localizedCaseInsensitiveContains($0) } ?? true
+            let matchesSpecialty = specialty.map { doctor.specialty.caseInsensitiveCompare($0) == .orderedSame } ?? true
+            return matchesSearch && matchesSpecialty && (!favoritesOnly || favoriteIds.contains(doctor.id!))
+        }
+        guard !doctors.isEmpty else { return [] }
+
+        let now = Date()
+        let calendar = ClinicTime.calendar
+        let today = calendar.startOfDay(for: now)
+        let days = (0..<14).compactMap { calendar.date(byAdding: .day, value: $0, to: today) }
+        let doctorIds = try doctors.map { try $0.requireID() }
+        let schedules = try await Schedule.query(on: req.db).filter(\.$doctor.$id ~~ doctorIds).all()
+        let appointments = try await Appointment.query(on: req.db).filter(\.$doctor.$id ~~ doctorIds)
+            .filter(\.$date >= ClinicTime.dayString(today)).filter(\.$date <= ClinicTime.dayString(days.last!))
+            .filter(\.$status ~~ BookingSlots.occupyingStatuses).all()
+        let schedulesByDoctor = Dictionary(grouping: schedules, by: { $0.$doctor.id })
+        let appointmentsByDoctor = Dictionary(grouping: appointments, by: { $0.$doctor.id })
+
+        return doctors.map { doctor in
+            let id = doctor.id!
+            let next = days.lazy.compactMap { day in
+                BookingSlots.slots(on: day, schedules: schedulesByDoctor[id] ?? [], appointments: appointmentsByDoctor[id] ?? [], now: now)
+                    .first(where: \.available)
+            }.first
+            return DoctorPublicResponse(doctor, isFavorite: favoriteIds.contains(id), nextAvailable: next)
         }
     }
 
-    // GET /api/doctors/:id
     @Sendable
     func show(req: Request) async throws -> DoctorPublicResponse {
-        guard let doc = try await Doctor.find(req.parameters.get("id"), on: req.db) else {
-            throw Abort(.notFound)
+        let user = try req.auth.require(User.self)
+        let doctorId = try req.parameters.require("id", as: UUID.self)
+        guard let doctor = try await Doctor.find(doctorId, on: req.db) else { throw Abort(.notFound) }
+        let favorite = try await DoctorFavorite.query(on: req.db)
+            .filter(\.$userId == user.requireID()).filter(\.$doctorId == doctorId).first()
+        return DoctorPublicResponse(doctor, isFavorite: favorite != nil)
+    }
+
+    @Sendable
+    func availability(req: Request) async throws -> [AppointmentSlot] {
+        let id = try req.parameters.require("id", as: UUID.self)
+        guard try await Doctor.find(id, on: req.db) != nil else { throw Abort(.notFound) }
+        let range = try req.query.decode(AvailabilityQuery.self)
+        guard let from = ClinicTime.day(range.from), let to = ClinicTime.day(range.to),
+              let length = ClinicTime.calendar.dateComponents([.day], from: from, to: to).day,
+              (0..<31).contains(length) else {
+            throw Abort(.badRequest, reason: "Provide from and to dates covering up to 31 days")
         }
-        return DoctorPublicResponse(
-            id: doc.id!,
-            name: doc.name,
-            specialty: doc.specialty,
-            status: doc.status,
-            experience: doc.experience,
-            rating: doc.rating,
-            bio: doc.bio,
-            education: doc.education,
-            license: doc.license
-        )
+        let now = Date()
+        let schedules = try await Schedule.query(on: req.db).filter(\.$doctor.$id == id).all()
+        let appointments = try await Appointment.query(on: req.db).filter(\.$doctor.$id == id)
+            .filter(\.$date >= range.from).filter(\.$date <= range.to)
+            .filter(\.$status ~~ BookingSlots.occupyingStatuses).all()
+        return (0...length).compactMap { ClinicTime.calendar.date(byAdding: .day, value: $0, to: from) }
+            .flatMap { BookingSlots.slots(on: $0, schedules: schedules, appointments: appointments, now: now) }
+    }
+
+    @Sendable
+    func favorite(req: Request) async throws -> HTTPStatus {
+        let userId = try req.auth.require(User.self).requireID()
+        let doctorId = try req.parameters.require("id", as: UUID.self)
+        try await req.db.transaction { database in
+            try await BookingSlots.lockDoctor(doctorId, on: database)
+            if try await DoctorFavorite.query(on: database).filter(\.$userId == userId).filter(\.$doctorId == doctorId).first() == nil {
+                let favorite = DoctorFavorite()
+                favorite.userId = userId
+                favorite.doctorId = doctorId
+                try await favorite.create(on: database)
+            }
+        }
+        return .noContent
+    }
+
+    @Sendable
+    func unfavorite(req: Request) async throws -> HTTPStatus {
+        let userId = try req.auth.require(User.self).requireID()
+        let doctorId = try req.parameters.require("id", as: UUID.self)
+        try await DoctorFavorite.query(on: req.db).filter(\.$userId == userId).filter(\.$doctorId == doctorId).delete()
+        return .noContent
     }
 
     // POST /api/doctors (Admin Only)
@@ -132,6 +188,9 @@ struct DoctorController: RouteCollection {
             rating: input.rating
         )
         
+        doctor.avatarURL = input.avatarURL
+        doctor.reviewCount = input.reviewCount
+        doctor.practice = input.practice
         try await doctor.save(on: req.db)
         return doctor
     }
@@ -157,6 +216,9 @@ struct DoctorController: RouteCollection {
         doctor.joinDate = input.joinDate
         doctor.totalPatients = input.totalPatients
         doctor.rating = input.rating
+        if let avatarURL = input.avatarURL { doctor.avatarURL = avatarURL }
+        if let reviewCount = input.reviewCount { doctor.reviewCount = reviewCount }
+        if let practice = input.practice { doctor.practice = practice }
         
         try await doctor.save(on: req.db)
         
@@ -195,17 +257,7 @@ struct DoctorController: RouteCollection {
         }
         
         // Return Safe DTO
-        return DoctorPublicResponse(
-            id: doc.id!,
-            name: doc.name,
-            specialty: doc.specialty,
-            status: doc.status,
-            experience: doc.experience,
-            rating: doc.rating,
-            bio: doc.bio,
-            education: doc.education,
-            license: doc.license
-        )
+        return DoctorPublicResponse(doc)
     }
     
     // PUT /api/doctors/me
@@ -228,19 +280,15 @@ struct DoctorController: RouteCollection {
         if let e = input.education { doc.education = e }
         if let b = input.bio { doc.bio = b }
         if let ex = input.experience { doc.experience = ex }
+        if let avatarURL = input.avatarURL { doc.avatarURL = avatarURL }
+        if let practice = input.practice { doc.practice = practice }
         
         try await doc.save(on: req.db)
         
-        return DoctorPublicResponse(
-            id: doc.id!,
-            name: doc.name,
-            specialty: doc.specialty,
-            status: doc.status,
-            experience: doc.experience,
-            rating: doc.rating,
-            bio: doc.bio,
-            education: doc.education,
-            license: doc.license
-        )
+        return DoctorPublicResponse(doc)
     }
+}
+private struct AvailabilityQuery: Content {
+    let from: String
+    let to: String
 }

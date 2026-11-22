@@ -105,6 +105,7 @@ struct UserController: RouteCollection {
         if let postalCode = input.postalCode { dbUser.postalCode = postalCode }
         if let emergencyContact = input.emergencyContact { dbUser.emergencyContact = emergencyContact }
         if let emergencyPhone = input.emergencyPhone { dbUser.emergencyPhone = emergencyPhone }
+        if let avatarURL = input.avatarURL { dbUser.avatarURL = avatarURL.isEmpty ? nil : avatarURL }
         
         try await dbUser.save(on: req.db)
         return UserResponse(user: dbUser)

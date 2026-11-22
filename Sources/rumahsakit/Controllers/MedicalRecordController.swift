@@ -45,38 +45,38 @@ struct MedicalRecordController: RouteCollection {
 
         let input = try req.content.decode(CreateMedicalRecordRequest.self)
 
-        // Find appointment
-        guard let appointment = try await Appointment.find(input.appointmentId, on: req.db) else {
-            throw Abort(.notFound, reason: "Appointment not found")
+        try validateDetails(type: input.recordType, severity: input.severity, medications: input.medications)
+        return try await AppointmentController().withLockedAppointment(input.appointmentId, on: req.db) { appointment, database in
+            if user.role == .doctor, appointment.$doctor.value?.$user.id != user.id { throw Abort(.forbidden) }
+            guard ["pending", "approved", "completed"].contains(appointment.status) else { throw Abort(.conflict) }
+            let record = MedicalRecord(
+                appointmentId: input.appointmentId,
+                patientId: appointment.$patient.id,  // Auto-link to Patient from Appointment
+                diagnosis: input.diagnosis,
+                symptoms: input.symptoms,
+                treatment: input.treatment,
+                prescription: input.prescription,
+                notes: input.notes,
+
+                // New Fields
+                followUpRequired: input.followUpRequired,
+                followUpDate: input.followUpDate,
+
+                // Unpack Vitals
+                vitalBloodPressure: input.vitalSigns?.bloodPressure,
+                vitalHeartRate: input.vitalSigns?.heartRate,
+                vitalTemperature: input.vitalSigns?.temperature,
+                vitalWeight: input.vitalSigns?.weight
+            )
+            record.recordType = input.recordType ?? "diagnosis"
+            record.severity = input.severity
+            record.symptomTags = input.symptomTags
+            record.medications = input.medications
+            appointment.status = "completed"
+            try await appointment.save(on: database)
+            try await record.create(on: database)
+            return record
         }
-
-        // Create Record
-        let record = MedicalRecord(
-            appointmentId: input.appointmentId,
-            patientId: appointment.$patient.id,  // Auto-link to Patient from Appointment
-            diagnosis: input.diagnosis,
-            symptoms: input.symptoms,
-            treatment: input.treatment,
-            prescription: input.prescription,
-            notes: input.notes,
-
-            // New Fields
-            followUpRequired: input.followUpRequired,
-            followUpDate: input.followUpDate,
-
-            // Unpack Vitals
-            vitalBloodPressure: input.vitalSigns?.bloodPressure,
-            vitalHeartRate: input.vitalSigns?.heartRate,
-            vitalTemperature: input.vitalSigns?.temperature,
-            vitalWeight: input.vitalSigns?.weight
-        )
-
-        // Automatically mark appointment as "completed"
-        appointment.status = "completed"
-        try await appointment.save(on: req.db)
-
-        try await record.save(on: req.db)
-        return record
     }
 
     // 2. LIST RECORDS
@@ -84,28 +84,26 @@ struct MedicalRecordController: RouteCollection {
     func index(req: Request) async throws -> [MedicalRecord] {
         let user = try req.auth.require(User.self)
 
+        let query = MedicalRecord.query(on: req.db).with(\.$appointment) { $0.with(\.$doctor) }
         if user.role == .patient {
-            // Patient: See MY records
-            return try await MedicalRecord.query(on: req.db)
-                .filter(\.$patient.$id == user.id!)
-                .with(\.$appointment)
-                .all()
-        } else {
-            // Doctor/Admin: See ALL records (or add logic to filter by doctor if needed)
-            return try await MedicalRecord.query(on: req.db)
-                .with(\.$patient)
-                .with(\.$appointment)
-                .all()
+            query.filter(\.$patient.$id == user.id!)
+        } else if user.role == .doctor {
+            let doctorId = try await PatientAccess.doctorId(for: user, on: req.db)
+            let appointments = try await Appointment.query(on: req.db).filter(\.$doctor.$id == doctorId)
+                .all(\.$id).compactMap { $0 }
+            guard !appointments.isEmpty else { return [] }
+            query.filter(\.$appointment.$id ~~ appointments)
         }
+        return try await filtered(query, req: req)
     }
 
-    // 3. SHOW DETAIL
     @Sendable
     func show(req: Request) async throws -> MedicalRecord {
-        guard let record = try await MedicalRecord.find(req.parameters.get("id"), on: req.db) else {
-            throw Abort(.notFound)
-        }
-        // Ideally add security check here (is this my record?)
+        let user = try req.auth.require(User.self)
+        let id = try req.parameters.require("id", as: UUID.self)
+        guard let record = try await MedicalRecord.query(on: req.db).filter(\.$id == id)
+            .with(\.$appointment, { $0.with(\.$doctor) }).first() else { throw Abort(.notFound) }
+        try await PatientAccess.requireRecord(user, record: record, on: req.db)
         return record
     }
 
@@ -150,6 +148,11 @@ struct MedicalRecordController: RouteCollection {
 
         // Decode Update Data
         let input = try req.content.decode(UpdateMedicalRecordRequest.self)
+        try validateDetails(type: input.recordType, severity: input.severity, medications: input.medications)
+        if let type = input.recordType { record.recordType = type }
+        if let severity = input.severity { record.severity = severity }
+        if let tags = input.symptomTags { record.symptomTags = tags }
+        if let medications = input.medications { record.medications = medications }
 
         if let d = input.diagnosis { record.diagnosis = d }
         if let s = input.symptoms { record.symptoms = s }
@@ -199,21 +202,33 @@ struct MedicalRecordController: RouteCollection {
             throw Abort(.badRequest)
         }
         
-        // Access Control
-        if user.role == .patient {
-            // Patients can only see THEIR OWN records
-            guard user.id == patientId else {
-                throw Abort(.forbidden, reason: "You can only view your own records")
+        try await PatientAccess.require(user, patientId: patientId, on: req.db)
+        let query = MedicalRecord.query(on: req.db).filter(\.$patient.$id == patientId)
+            .with(\.$appointment) { $0.with(\.$doctor) }
+        return try await filtered(query, req: req)
+    }
+
+    private func filtered(_ query: QueryBuilder<MedicalRecord>, req: Request) async throws -> [MedicalRecord] {
+        if let type = req.query[String.self, at: "type"] {
+            try validateDetails(type: type, severity: nil, medications: nil)
+            if type == "diagnosis" {
+                query.group(.or) { $0.filter(\.$recordType == type).filter(\.$recordType == nil) }
+            } else {
+                query.filter(\.$recordType == type)
             }
         }
-        // Doctors and Admins can view anyone's records
-        
-        return try await MedicalRecord.query(on: req.db)
-            .filter(\.$patient.$id == patientId)
-            .sort(\.$createdAt, .descending) // Newest first
-            .with(\.$appointment) { appointment in
-                appointment.with(\.$doctor) // Load doctor through appointment
-            }
-            .all()
+        let search = req.query[String.self, at: "q"] ?? ""
+        if !search.isEmpty {
+            query.group(.or) { $0.filter(\.$diagnosis ~~ search).filter(\.$symptoms ~~ search) }
+        }
+        return try await query.sort(\.$createdAt, .descending).all()
+    }
+
+    private func validateDetails(type: String?, severity: String?, medications: [PrescribedMedication]?) throws {
+        if let type, !["diagnosis", "vaccination"].contains(type) { throw Abort(.badRequest, reason: "Unknown record type") }
+        if let severity, !["mild", "moderate", "severe"].contains(severity) { throw Abort(.badRequest, reason: "Unknown severity") }
+        if let medications, !medications.allSatisfy(\.isValid) || Set(medications.map(\.id)).count != medications.count {
+            throw Abort(.badRequest, reason: "Invalid or repeated medication schedule")
+        }
     }
 }

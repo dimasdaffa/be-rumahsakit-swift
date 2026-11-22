@@ -37,6 +37,8 @@ final class HealthUpdate: Model, Content {
     @OptionalField(key: "notes")
     var notes: String?
 
+    @OptionalField(key: "measured_at") var measuredAt: Date?
+
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
 

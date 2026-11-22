@@ -99,6 +99,12 @@ struct ClinicalNoteController: RouteCollection {
         guard let note = try await ClinicalNote.find(req.parameters.get("id"), on: req.db) else {
             throw Abort(.notFound)
         }
+        let user = try req.auth.require(User.self)
+        if user.role != .admin {
+            guard user.role == .doctor, try await PatientAccess.doctorId(for: user, on: req.db) == note.$doctor.id else {
+                throw Abort(.forbidden)
+            }
+        }
         return note
     }
 

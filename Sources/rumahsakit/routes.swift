@@ -60,6 +60,10 @@ func routes(_ app: Application) throws {
     try protected.register(collection: MessageController())
     try protected.register(collection: ScheduleController())
     try protected.register(collection: FileController())
+    try protected.register(collection: DocumentController())
+    try protected.register(collection: LabResultController())
+    try protected.register(collection: CarePlanController())
+    try protected.register(collection: PatientNotificationController())
 
     // ==========================================
     // 3. ADMIN ONLY ROUTES (Must be Admin) 👮‍♂️
@@ -74,4 +78,5 @@ func routes(_ app: Application) throws {
     let appointmentAdmin = adminOnly.grouped("api", "appointments")
     appointmentAdmin.put(":id", "approve", use: AppointmentController().approve)
     appointmentAdmin.put(":id", "reject", use: AppointmentController().reject)
+    appointmentAdmin.put(":id", "cancellation-requests", use: AppointmentController().decideCancellation)
 }

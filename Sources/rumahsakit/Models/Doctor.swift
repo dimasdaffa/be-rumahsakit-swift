@@ -47,6 +47,10 @@ final class Doctor: Model, Content {
     @Field(key: "rating")
     var rating: Double
 
+    @OptionalField(key: "avatar_url") var avatarURL: String?
+    @OptionalField(key: "review_count") var reviewCount: Int?
+    @OptionalField(key: "practice") var practice: DoctorPractice?
+
     init() { }
 
     init(id: UUID? = nil, userId: UUID, name: String, email: String, phone: String, specialty: String, status: String, license: String? = nil, experience: Int = 0, education: String? = nil, bio: String? = nil, joinDate: String? = nil, totalPatients: Int = 0, rating: Double = 0.0) {

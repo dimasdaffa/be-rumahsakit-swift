@@ -30,7 +30,8 @@ let package = Package(
             dependencies: [
                 .target(name: "rumahsakit"),
                 .product(name: "VaporTesting", package: "vapor"),
-            ]
+            ],
+            path: "Tests/BeRumahsakitTests"
         )
     ]
 )
