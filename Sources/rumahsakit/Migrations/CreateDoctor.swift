@@ -13,7 +13,7 @@ struct CreateDoctor: AsyncMigration {
         
         try await database.schema("doctors")
             .id()
-            .field("user_id", .uuid, .required, .references("users", "id", onDelete: .cascade)) // 🔗 LINK TO USER
+            .field("user_id", .uuid, .required, .references("users", "id", onDelete: .cascade)) // LINK TO USER
             .field("name", .string, .required)
             .field("email", .string, .required)
             .field("phone", .string, .required)
